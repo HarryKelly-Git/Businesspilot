@@ -1,0 +1,422 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Deep navy base with warm amber accent - professional trades-focused palette */
+    --background: 220 20% 98%;
+    --foreground: 220 30% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+
+    /* Primary: Deep navy/charcoal */
+    --primary: 220 35% 22%;
+    --primary-foreground: 220 20% 98%;
+
+    /* Secondary: Warm slate */
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 30% 20%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 12% 45%;
+
+    /* Accent: Warm amber/orange for CTAs - high contrast, action-oriented */
+    --accent: 35 95% 55%;
+    --accent-foreground: 220 30% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 35 95% 55%;
+
+    /* Success: Rich green for positive numbers */
+    --success: 150 70% 35%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning: Amber */
+    --warning: 35 95% 55%;
+    --warning-foreground: 220 30% 10%;
+
+    --radius: 0.75rem;
+
+    /* CTA Button specific - action orange */
+    --cta: 25 95% 53%;
+    --cta-foreground: 0 0% 100%;
+    --cta-hover: 25 95% 48%;
+  }
+
+  .dark {
+    --background: 220 30% 8%;
+    --foreground: 220 15% 95%;
+    --card: 220 25% 12%;
+    --card-foreground: 220 15% 95%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 15% 95%;
+
+    /* Primary: Lighter navy for dark mode */
+    --primary: 220 25% 35%;
+    --primary-foreground: 220 15% 95%;
+
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 15% 90%;
+
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 12% 60%;
+
+    /* Accent: Bright amber for dark mode CTAs */
+    --accent: 35 95% 55%;
+    --accent-foreground: 220 30% 10%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 35 95% 55%;
+    --success: 150 60% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 95% 55%;
+    --warning-foreground: 220 30% 10%;
+
+    --cta: 25 95% 53%;
+    --cta-foreground: 0 0% 100%;
+    --cta-hover: 25 95% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-[hsl(var(--border))];
+  }
+
+  body {
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /* Primary CTA - Amber/Orange button that pops */
+  .btn-primary {
+    @apply btn bg-[hsl(var(--cta))] text-[hsl(var(--cta-foreground))] hover:bg-[hsl(var(--cta-hover))] focus:ring-[hsl(var(--cta))] shadow-md hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply btn bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary))]/80 focus:ring-[hsl(var(--secondary))];
+  }
+
+  .btn-success {
+    @apply btn bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90 focus:ring-[hsl(var(--success))];
+  }
+
+  .btn-warning {
+    @apply btn bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] hover:bg-[hsl(var(--warning))]/90 focus:ring-[hsl(var(--warning))];
+  }
+
+  .btn-destructive {
+    @apply btn bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:bg-[hsl(var(--destructive))]/90 focus:ring-[hsl(var(--destructive))];
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-[hsl(var(--accent))] text-[hsl(var(--foreground))];
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-[hsl(var(--primary))] bg-transparent hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] text-[hsl(var(--primary))] font-semibold;
+  }
+
+  .btn-lg {
+    @apply btn px-8 py-4 text-base;
+  }
+
+  .btn-sm {
+    @apply btn px-3 py-1.5 text-xs;
+  }
+
+  .card {
+    @apply bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] shadow-sm;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300 hover:shadow-xl hover:border-[hsl(var(--accent))]/40 hover:-translate-y-1;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-4 py-3 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-[hsl(var(--foreground))] mb-1.5;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .badge-primary {
+    @apply badge bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))];
+  }
+
+  .badge-success {
+    @apply badge bg-[hsl(var(--success))]/10 text-[hsl(var(--success))];
+  }
+
+  .badge-warning {
+    @apply badge bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))];
+  }
+
+  .badge-destructive {
+    @apply badge bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))];
+  }
+
+  .badge-muted {
+    @apply badge bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))];
+  }
+
+  .metric-card {
+    @apply card p-6;
+  }
+
+  .metric-value {
+    @apply text-3xl font-bold text-[hsl(var(--foreground))];
+  }
+
+  .metric-label {
+    @apply text-sm text-[hsl(var(--muted-foreground))] mt-1;
+  }
+
+  /* Hero section styling */
+  .hero-headline {
+    @apply text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight;
+  }
+
+  .hero-value {
+    @apply text-5xl sm:text-6xl font-extrabold tracking-tight;
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-20 lg:py-28;
+  }
+
+  /* Trust badges */
+  .trust-badge {
+    @apply flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))];
+  }
+
+  /* Value prop highlight */
+  .value-highlight {
+    @apply bg-gradient-to-r from-[hsl(var(--accent))] to-[hsl(var(--accent))]/80 bg-clip-text text-transparent font-bold;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--accent))] bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 hsl(var(--accent) / 0.4);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 25px 8px hsl(var(--accent) / 0.25);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-count-up {
+  animation: count-up 0.4s ease-out;
+}
+
+/* Chat animations */
+@keyframes message-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-message {
+  animation: message-appear 0.3s ease-out;
+}
+
+/* Typing indicator */
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dot {
+  animation: typing-dot 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Gradient text animation */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Focus visible styles */
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2;
+}
+
+/* Number input arrows hidden */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Smooth section animations */
+@keyframes section-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-reveal {
+  animation: section-reveal 0.7s ease-out;
+}

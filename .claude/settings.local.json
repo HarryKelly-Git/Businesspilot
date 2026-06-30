@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm run *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-Job *)",
+      "PowerShell(npm install *)",
+      "PowerShell(node verify-auth.mjs 2>&1)",
+      "PowerShell(Remove-Item *)"
+    ]
+  }
+}
