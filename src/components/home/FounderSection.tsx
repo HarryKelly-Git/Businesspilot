@@ -1,0 +1,91 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Heart, MessageSquare } from 'lucide-react';
+import { Button } from '../ui';
+import { ContactModal } from './ContactModal';
+
+/**
+ * ── SET YOUR REAL NAME HERE ──────────────────────────────────────────────
+ * Put the actual founder's name and title in. The moment FOUNDER_NAME is a
+ * non-empty string, the portrait and byline appear and the story is signed
+ * personally — which is what makes this section convert.
+ *
+ * While it's empty the same story runs in the company's voice with no byline,
+ * which is honest and still persuasive. It is deliberately NOT filled with an
+ * invented person: the trust this section buys depends on the buyer being able
+ * to believe there's a real human behind the product.
+ *
+ * To add the portrait: save the image to  public/images/founder.jpg
+ * (create the folder if needed), then set FOUNDER_PHOTO below.
+ */
+const FOUNDER_NAME = '';
+const FOUNDER_TITLE = 'Founder & CEO, BusinessPilot';
+const FOUNDER_PHOTO = '/images/founder.jpg';
+
+const STORY = `I spent years watching small trade businesses lose jobs simply because nobody picked up the phone. A missed call at 9pm isn't just an inconvenience — it's a $400 job walking straight to a competitor who answered. I built BusinessPilot so that never happens again. Every enquiry gets a response in seconds, every lead gets followed up, and every job gets booked — whether you're on the tools, in a meeting, or asleep. If it doesn't work for your business, you get your money back. Simple as that.`;
+
+// Same story, no first-person claim, for while FOUNDER_NAME is unset.
+const STORY_UNSIGNED = `We spent years watching small trade businesses lose jobs simply because nobody picked up the phone. A missed call at 9pm isn't just an inconvenience — it's a $400 job walking straight to a competitor who answered. We built BusinessPilot so that never happens again. Every enquiry gets a response in seconds, every lead gets followed up, and every job gets booked — whether you're on the tools, in a meeting, or asleep. If it doesn't work for your business, you get your money back. Simple as that.`;
+
+export function FounderSection() {
+  const [contactOpen, setContactOpen] = useState(false);
+  const signed = FOUNDER_NAME.trim().length > 0;
+
+  return (
+    <section className="py-20 lg:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mx-auto max-w-3xl"
+        >
+          <div className="rounded-2xl border border-border bg-card p-8 text-center lg:p-12">
+            {signed ? (
+              <img
+                src={FOUNDER_PHOTO}
+                alt={`${FOUNDER_NAME}, ${FOUNDER_TITLE}`}
+                width={112}
+                height={112}
+                loading="lazy"
+                className="mx-auto mb-6 h-28 w-28 rounded-full object-cover shadow-lg ring-4 ring-[hsl(var(--accent))]/20"
+              />
+            ) : (
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] shadow-lg">
+                <Heart className="h-9 w-9 text-white" aria-hidden="true" />
+              </div>
+            )}
+
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--accent))]/10 px-4 py-2 text-sm font-semibold text-[hsl(var(--accent))]">
+              <Heart className="h-4 w-4" aria-hidden="true" />
+              {signed ? 'A note from our founder' : 'Why we built this'}
+            </div>
+
+            <blockquote className="text-lg leading-relaxed text-muted-foreground lg:text-xl">
+              {signed ? `"${STORY}"` : STORY_UNSIGNED}
+            </blockquote>
+
+            {signed && (
+              <div className="mt-6">
+                <p className="font-semibold text-foreground">{FOUNDER_NAME}</p>
+                <p className="text-sm text-muted-foreground">{FOUNDER_TITLE}</p>
+              </div>
+            )}
+
+            <div className="mt-8 border-t border-border pt-6">
+              <p className="mb-4 text-sm text-muted-foreground">
+                Want to know if it suits your business? Ask us directly.
+              </p>
+              <Button size="lg" variant="outline" onClick={() => setContactOpen(true)}>
+                <MessageSquare className="mr-2 h-4 w-4" aria-hidden="true" />
+                Get in touch
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
+    </section>
+  );
+}

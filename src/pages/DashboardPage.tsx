@@ -1,21 +1,39 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Phone,
   Calendar,
-  Clock,
   Users,
   CheckCircle,
   AlertCircle,
   Settings,
   Sparkles,
+  DollarSign,
+  X,
+  Zap,
 } from 'lucide-react';
 import { Card, Badge, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useLeads, useAppointments, useMissedCalls } from '../hooks/useData';
 import { formatTime, getGreeting, timeAgo } from '../lib/utils';
 import { TestMessage } from '../components/TestMessage';
+import { AICoachCard } from '../components/dashboard/AICoachCard';
+import { supabase } from '../lib/supabase';
+import {
+  sampleLeads,
+  sampleAppointments,
+  sampleActivity,
+  shouldShowSampleData,
+  SAMPLE_REVENUE_RECOVERED,
+} from '../lib/sampleData';
+
+/** Small marker so nothing on screen can be mistaken for real activity. */
+const SampleBadge = () => (
+  <span className="ml-2 shrink-0 rounded-full bg-[hsl(var(--accent))]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--accent))]">
+    Sample
+  </span>
+);
 
 // Skeleton component for loading states
 const MetricCardSkeleton = () => (
@@ -41,13 +59,35 @@ const ListSkeleton = () => (
 );
 
 export function DashboardPage() {
-  const { profile, business } = useAuth();
-  const { leads, loading: leadsLoading } = useLeads();
-  const { appointments, loading: appointmentsLoading } = useAppointments();
+  const { profile, business, refreshBusiness } = useAuth();
+  const { leads: realLeads, loading: leadsLoading } = useLeads();
+  const { appointments: realAppointments, loading: appointmentsLoading } = useAppointments();
   const { missedCalls, loading: callsLoading } = useMissedCalls();
+  const [dismissing, setDismissing] = useState(false);
 
   const greeting = getGreeting();
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
+
+  // Show sample data only while the account is genuinely empty and new. The
+  // moment a real lead arrives, or the user dismisses, real data takes over.
+  const showSample = shouldShowSampleData(
+    business as { created_at?: string; sample_data_dismissed_at?: string | null } | null,
+    realLeads.length > 0
+  );
+
+  const leads = showSample ? sampleLeads : realLeads;
+  const appointments = showSample ? sampleAppointments : realAppointments;
+
+  const handleDismissSample = async () => {
+    if (!business) return;
+    setDismissing(true);
+    await supabase
+      .from('businesses')
+      .update({ sample_data_dismissed_at: new Date().toISOString() })
+      .eq('id', business.id);
+    await refreshBusiness();
+    setDismissing(false);
+  };
 
   // Don't block on all loading - show content progressively
   const leadsReady = !leadsLoading;
@@ -87,7 +127,29 @@ export function DashboardPage() {
   const hasAppointments = appointments.length > 0;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
+      {/* Sample-data banner */}
+      {showSample && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex flex-col gap-3 rounded-xl border border-[hsl(var(--accent))]/30 bg-[hsl(var(--accent))]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm">
+              <span className="font-semibold">This is sample data</span> to show you how
+              BusinessPilot works. It'll be replaced by your real data as leads come in.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDismissSample}
+              loading={dismissing}
+              className="shrink-0 self-start sm:self-auto"
+            >
+              <X className="mr-1 h-4 w-4" aria-hidden="true" />
+              Dismiss
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Welcome Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -174,6 +236,79 @@ export function DashboardPage() {
         </motion.div>
       )}
 
+      {/* Revenue recovered — lead with the number that means money. */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card className="p-6">
+          <div className="flex items-center gap-2">
+            <DollarSign
+              className="h-4 w-4 text-[hsl(var(--success))]"
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium text-muted-foreground">
+              Revenue recovered this month
+            </span>
+            {showSample && <SampleBadge />}
+          </div>
+          <p className="mt-2 text-5xl font-extrabold text-[hsl(var(--success))]">
+            $
+            {(showSample
+              ? SAMPLE_REVENUE_RECOVERED
+              : realLeads
+                  .filter((l) => l.status === 'converted')
+                  .reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0)
+            ).toLocaleString()}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            From jobs booked by your AI
+          </p>
+        </Card>
+      </motion.div>
+
+      {/* AI Business Coach */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18 }}
+      >
+        <AICoachCard hasRealData={realLeads.length > 0} insight={null} />
+      </motion.div>
+
+      {/* Live AI activity */}
+      {showSample && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22 }}
+        >
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Zap
+                className="h-4 w-4 text-[hsl(var(--accent))]"
+                aria-hidden="true"
+              />
+              <h2 className="font-semibold">What your AI has been doing</h2>
+              <SampleBadge />
+            </div>
+            <ul className="space-y-3">
+              {sampleActivity.map((item) => (
+                <li key={item.id} className="flex items-start gap-3 text-sm">
+                  <span
+                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--success))]"
+                    aria-hidden="true"
+                  />
+                  <span className="flex-1">{item.text}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{item.time}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Real Metrics */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -248,7 +383,10 @@ export function DashboardPage() {
         >
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold">Recent Leads</h2>
+              <h2 className="text-lg font-semibold flex items-center">
+                Recent Leads
+                {showSample && <SampleBadge />}
+              </h2>
               <Link to="/leads" className="text-sm text-primary hover:underline">
                 View all
               </Link>
@@ -316,7 +454,10 @@ export function DashboardPage() {
         >
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold">Upcoming Jobs</h2>
+              <h2 className="text-lg font-semibold flex items-center">
+                Upcoming Jobs
+                {showSample && <SampleBadge />}
+              </h2>
               <Link to="/appointments" className="text-sm text-primary hover:underline">
                 View all
               </Link>

@@ -18,6 +18,7 @@ import {
   Lock,
   Heart,
   Users,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '../components/ui';
 import { SalesAIChat } from '../components/SalesAIChat';
@@ -26,6 +27,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { IndustryCalculator } from '../components/home/IndustryCalculator';
 import { SMSDemoThread } from '../components/home/SMSDemoThread';
 import { Testimonials } from '../components/home/Testimonials';
+import { FounderSection } from '../components/home/FounderSection';
 import { ResponseComparison } from '../components/home/ResponseComparison';
 import { LeakScore } from '../components/home/LeakScore';
 import { industries } from '../lib/industries';
@@ -466,51 +468,7 @@ export function HomePage() {
       {/* Renders only once real quotes exist — see Testimonials.tsx */}
       <Testimonials />
 
-      {/* Founder's Note Section */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-3xl mx-auto"
-          >
-            <div className="bg-card rounded-2xl border border-border p-8 lg:p-12 text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
-                {/* TODO: Replace with real founder photo */}
-                FP
-              </div>
-
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))] text-sm font-semibold mb-6">
-                <Heart className="w-4 h-4" />
-                A Note from Our Founder
-              </div>
-
-              <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed mb-6">
-                "I built BusinessPilot because service businesses lose real money to missed calls every day.
-                We just launched, and I'm committed to making sure every early customer gets real value from this tool.
-                If you're one of our founding businesses, I'll personally help you get set up and make sure it works for you."
-              </p>
-
-              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">Founder, BusinessPilot</span>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-border">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Be among our first customers and help shape the product.
-                </p>
-                <Link to="/auth?signup=true">
-                  <Button size="lg">
-                    Get Started as a Founding Member
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      <FounderSection />
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 lg:py-28 bg-muted/30">
@@ -583,9 +541,36 @@ export function HomePage() {
                     Start Free Trial
                   </Button>
                 </Link>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  30-day money-back guarantee · No contract · Cancel anytime
+                </p>
               </motion.div>
             ))}
           </div>
+
+          {/* Guarantee — sits below the cards so it reassures without competing
+              with the plan comparison above it. */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mx-auto mt-12 max-w-3xl"
+          >
+            <div className="rounded-2xl border-2 border-[hsl(var(--success))]/25 bg-[hsl(var(--success))]/5 p-8 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--success))]/15">
+                <ShieldCheck
+                  className="h-7 w-7 text-[hsl(var(--success))]"
+                  aria-hidden="true"
+                />
+              </div>
+              <h3 className="mb-3 text-2xl font-extrabold">30-day money-back guarantee</h3>
+              <p className="mx-auto max-w-2xl text-muted-foreground">
+                Try BusinessPilot completely risk-free for 30 days. If it doesn't book you at
+                least one extra job in your first month, contact us and we'll refund every cent
+                — no questions, no hassle, no fine print.
+              </p>
+            </div>
+          </motion.div>
 
           <div className="text-center mt-8">
             <p className="text-muted-foreground">
