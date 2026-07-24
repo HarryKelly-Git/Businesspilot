@@ -281,6 +281,25 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+  // Close on Escape and lock background scroll while open. Both matter most on mobile,
+  // where a modal that traps you behind a scrolling page feels broken.
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const sizes = {
@@ -291,21 +310,32 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    // `p-4` on the scroll container (not margin on the panel) keeps the panel inside the
+    // viewport at 375px instead of overflowing by the margin width.
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
-      <div className={cn(
-        'relative z-10 w-full bg-card rounded-xl shadow-xl p-6 m-4',
-        sizes[size]
-      )}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={cn(
+          // max-h + inner scroll means long forms stay reachable — previously the submit
+          // buttons on the Add Lead form were rendered off-screen with no way to reach them.
+          'relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-xl bg-card shadow-xl',
+          sizes[size]
+        )}
+      >
         {title && (
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border p-6 pb-4">
             <h2 className="text-lg font-semibold">{title}</h2>
             <button
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Close dialog"
+              className="shrink-0 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -313,7 +343,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             </button>
           </div>
         )}
-        {children}
+        <div className="overflow-y-auto overscroll-contain p-6">{children}</div>
       </div>
     </div>
   );

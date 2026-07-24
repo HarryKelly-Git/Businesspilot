@@ -1,335 +1,278 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   CheckCircle,
-  XCircle,
   AlertTriangle,
-  Settings,
-  ExternalLink,
-  RefreshCw,
-  Zap,
-  CreditCard,
-  MessageSquare,
   Clock,
+  ArrowRight,
+  MessageSquare,
+  Users,
+  Calendar,
+  Sparkles,
+  CreditCard,
+  Building,
+  CalendarClock,
+  Webhook,
   Globe,
-  Facebook,
-  MessageCircle,
   FileText,
-  Calculator,
-  DollarSign,
 } from 'lucide-react';
 import { Card, Button, Badge } from '../components/ui';
-import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../hooks/useSubscription';
 
-interface Integration {
-  name: string;
-  description: string;
-  status: 'connected' | 'not_configured' | 'error' | 'coming_soon';
+type Status = 'live' | 'needs_setup' | 'coming_soon';
+
+interface Capability {
+  title: string;
+  plainEnglish: string;
+  status: Status;
   icon: React.ReactNode;
-  docsUrl?: string;
-  required: boolean;
-  setupUrl?: string;
-  note?: string;
-  category: 'core' | 'messaging' | 'payments' | 'coming_soon';
+  /** What the owner should do next, when there's something to do. */
+  action?: { label: string; to: string };
+}
+
+function StatusPill({ status }: { status: Status }) {
+  switch (status) {
+    case 'live':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success">
+          <CheckCircle className="w-4 h-4" aria-hidden="true" />
+          Working
+        </span>
+      );
+    case 'needs_setup':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-warning">
+          <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+          Needs your input
+        </span>
+      );
+    case 'coming_soon':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+          <Clock className="w-4 h-4" aria-hidden="true" />
+          Coming soon
+        </span>
+      );
+  }
 }
 
 export function IntegrationsPage() {
-  const integrations: Integration[] = [
-    // Core integrations
-    {
-      name: 'Supabase',
-      description: 'Database, authentication, and real-time subscriptions',
-      status: 'connected',
-      icon: <Zap className="w-6 h-6 text-green-500" />,
-      required: true,
-      category: 'core',
-    },
-    {
-      name: 'Stripe',
-      description: 'Payment processing and subscription management',
-      status: 'connected',
-      icon: <CreditCard className="w-6 h-6 text-green-500" />,
-      required: false,
-      setupUrl: '/dashboard/settings?tab=billing',
-      note: 'Webhook endpoint: /functions/v1/stripe-webhook',
-      category: 'payments',
-    },
-    {
-      name: 'Twilio',
-      description: 'SMS messaging for lead capture and follow-ups',
-      status: 'connected',
-      icon: <MessageSquare className="w-6 h-6 text-green-500" />,
-      required: false,
-      note: 'Webhook endpoint: /functions/v1/twilio-webhook',
-      category: 'messaging',
-    },
-    {
-      name: 'Claude AI (Anthropic)',
-      description: 'AI-powered response generation for customer enquiries',
-      status: 'connected',
-      icon: <Zap className="w-6 h-6 text-green-500" />,
-      required: false,
-      note: 'Uses Claude 3 Haiku for fast, cost-effective responses',
-      category: 'core',
-    },
+  const { business } = useAuth();
+  const { subscription } = useSubscription(business?.id ?? null);
 
-    // Coming Soon
+  const settings = (business?.settings ?? {}) as Record<string, unknown>;
+  const hasPhone = Boolean(business?.phone);
+  const hasProfile = Boolean(business?.name && business?.industry);
+  const hasVoice = Boolean(settings.businessDescription || settings.responseTone);
+  const hasServices = Array.isArray(settings.services) && settings.services.length > 0;
+
+  // Every status below is derived from real account data. Nothing is hardcoded
+  // to "connected" — if we can't verify it, we don't claim it.
+  const capabilities: Capability[] = [
     {
-      name: 'Google Business Profile',
-      description: 'Respond to Google messages and reviews automatically',
-      status: 'coming_soon',
-      icon: <Globe className="w-6 h-6 text-muted-foreground" />,
-      required: false,
-      category: 'coming_soon',
+      title: 'Answering enquiries day and night',
+      plainEnglish:
+        'When someone texts your business number, they get a real reply within seconds — including at 11pm on a Sunday.',
+      status: hasPhone ? 'live' : 'needs_setup',
+      icon: <MessageSquare className="w-5 h-5" />,
+      action: hasPhone ? undefined : { label: 'Add your number', to: '/settings' },
     },
     {
-      name: 'Facebook & Instagram Lead Ads',
-      description: 'Auto-follow-up on social media lead form submissions',
-      status: 'coming_soon',
-      icon: <Facebook className="w-6 h-6 text-muted-foreground" />,
-      required: false,
-      category: 'coming_soon',
+      title: 'Capturing every lead',
+      plainEnglish:
+        'Every enquiry is saved with the name, number and what they asked for — so nothing gets lost in a text thread.',
+      status: hasProfile ? 'live' : 'needs_setup',
+      icon: <Users className="w-5 h-5" />,
+      action: hasProfile ? undefined : { label: 'Finish your profile', to: '/settings' },
     },
     {
-      name: 'WhatsApp Business',
-      description: 'Customer messaging via WhatsApp for international reach',
-      status: 'coming_soon',
-      icon: <MessageCircle className="w-6 h-6 text-muted-foreground" />,
-      required: false,
-      category: 'coming_soon',
+      title: 'Asking the right questions for your trade',
+      plainEnglish:
+        'The AI knows what to ask for your line of work — whether a job is urgent, what the address is, what needs doing.',
+      status: hasProfile ? 'live' : 'needs_setup',
+      icon: <Sparkles className="w-5 h-5" />,
+      action: hasProfile ? undefined : { label: 'Pick your trade', to: '/settings' },
     },
     {
-      name: 'QuickBooks',
-      description: 'Auto-create draft invoices when leads are marked as booked',
-      status: 'coming_soon',
-      icon: <FileText className="w-6 h-6 text-muted-foreground" />,
-      required: false,
-      category: 'coming_soon',
+      title: 'Sounding like your business',
+      plainEnglish:
+        'Replies match your tone and mention your services, so customers feel like they are talking to you.',
+      status: hasVoice && hasServices ? 'live' : 'needs_setup',
+      icon: <Building className="w-5 h-5" />,
+      action:
+        hasVoice && hasServices ? undefined : { label: 'Set your tone', to: '/settings' },
     },
     {
-      name: 'Xero',
-      description: 'Sync booked jobs to your Xero accounting',
-      status: 'coming_soon',
-      icon: <DollarSign className="w-6 h-6 text-muted-foreground" />,
-      required: false,
-      category: 'coming_soon',
+      title: 'Booking jobs into your calendar',
+      plainEnglish:
+        'Confirmed jobs appear in your BusinessPilot calendar. Two-way sync with Google Calendar is on the way.',
+      status: 'live',
+      icon: <Calendar className="w-5 h-5" />,
+      action: { label: 'View calendar', to: '/appointments' },
     },
     {
-      name: 'Quote & Estimate Builder',
-      description: 'AI can give rough price ranges during conversations based on job type',
+      title: 'Your subscription',
+      plainEnglish: subscription
+        ? 'Your plan is active. You can change or cancel it any time.'
+        : "You're on the free trial. Pick a plan to keep your AI answering when it ends.",
+      status: subscription ? 'live' : 'needs_setup',
+      icon: <CreditCard className="w-5 h-5" />,
+      action: subscription ? undefined : { label: 'See plans', to: '/pricing' },
+    },
+    {
+      title: 'Google Calendar two-way sync',
+      plainEnglish:
+        'Jobs booked by the AI push straight into Google Calendar, and changes you make there sync back.',
       status: 'coming_soon',
-      icon: <Calculator className="w-6 h-6 text-muted-foreground" />,
-      required: false,
-      category: 'coming_soon',
+      icon: <CalendarClock className="w-5 h-5" />,
+    },
+    {
+      title: 'Send leads to your other tools',
+      plainEnglish:
+        'Push every new lead and booked job to Zapier, so it lands in your accounting or job management software.',
+      status: 'coming_soon',
+      icon: <Webhook className="w-5 h-5" />,
+    },
+    {
+      title: 'Google Business Profile messages',
+      plainEnglish: 'Reply automatically to enquiries that come through your Google listing.',
+      status: 'coming_soon',
+      icon: <Globe className="w-5 h-5" />,
+    },
+    {
+      title: 'Automatic draft invoices',
+      plainEnglish: 'When a job is marked done, create a draft invoice in Xero or QuickBooks.',
+      status: 'coming_soon',
+      icon: <FileText className="w-5 h-5" />,
     },
   ];
 
-  const getStatusBadge = (status: Integration['status']) => {
-    switch (status) {
-      case 'connected':
-        return <Badge variant="success">Connected</Badge>;
-      case 'not_configured':
-        return <Badge variant="muted">Not Configured</Badge>;
-      case 'error':
-        return <Badge variant="destructive">Error</Badge>;
-      case 'coming_soon':
-        return <Badge variant="muted" className="text-xs border border-muted-foreground/30 text-muted-foreground">Coming Soon</Badge>;
-    }
-  };
-
-  const getStatusIcon = (status: Integration['status']) => {
-    switch (status) {
-      case 'connected':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'not_configured':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-      case 'error':
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'coming_soon':
-        return <Clock className="w-5 h-5 text-muted-foreground" />;
-    }
-  };
-
-  const connectedCount = integrations.filter((i) => i.status === 'connected').length;
-  const activeIntegrations = integrations.filter((i) => i.status !== 'coming_soon');
-  const requiredConnected = activeIntegrations.filter((i) => i.required && i.status === 'connected').length;
-  const requiredTotal = activeIntegrations.filter((i) => i.required).length;
+  const active = capabilities.filter((c) => c.status !== 'coming_soon');
+  const upcoming = capabilities.filter((c) => c.status === 'coming_soon');
+  const liveCount = active.filter((c) => c.status === 'live').length;
+  const needsSetup = active.filter((c) => c.status === 'needs_setup');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
-        <h1 className="text-2xl font-bold">Integrations</h1>
+        <h1 className="text-2xl font-bold">What BusinessPilot is doing for you</h1>
         <p className="text-muted-foreground">
-          Manage connections to external services
+          A plain-English view of what's switched on and what still needs a minute of your time.
         </p>
       </div>
 
-      {/* Status Summary */}
+      {/* Summary */}
       <Card className="p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-lg font-semibold">Integration Status</h2>
-              {requiredConnected === requiredTotal ? (
-                <Badge variant="success">All Required Connected</Badge>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-semibold">
+                {liveCount} of {active.length} working
+              </h2>
+              {needsSetup.length === 0 ? (
+                <Badge variant="success">All set</Badge>
               ) : (
-                <Badge variant="warning">Setup Required</Badge>
+                <Badge variant="warning">
+                  {needsSetup.length} thing{needsSetup.length > 1 ? 's' : ''} to finish
+                </Badge>
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {connectedCount} of {activeIntegrations.length} integrations connected
+              {needsSetup.length === 0
+                ? "Everything's running. You'll see new enquiries land on your dashboard."
+                : `Finish ${needsSetup.length === 1 ? 'this' : 'these'} and your AI is fully live.`}
             </p>
           </div>
-          <Button variant="outline" size="sm" disabled>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh All
-          </Button>
-        </div>
-      </Card>
-
-      {/* Connected Integrations */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Zap className="w-5 h-5 text-green-500" />
-          Active Integrations
-        </h2>
-        <div className="grid gap-4">
-          {integrations.filter(i => i.status === 'connected').map((integration, index) => (
-            <motion.div
-              key={integration.name}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                      {integration.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{integration.name}</h3>
-                        {integration.required && (
-                          <Badge variant="muted" className="text-xs border border-border">
-                            Required
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {integration.description}
-                      </p>
-                      {integration.note && (
-                        <p className="text-xs text-primary mt-1 font-mono">
-                          {integration.note}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(integration.status)}
-                      {getStatusBadge(integration.status)}
-                    </div>
-
-                    {integration.setupUrl && (
-                      <Link to={integration.setupUrl}>
-                        <Button variant="outline" size="sm">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Settings
-                        </Button>
-                      </Link>
-                    )}
-
-                    {integration.docsUrl && (
-                      <a
-                        href={integration.docsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                      >
-                        Docs
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Coming Soon Integrations */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-muted-foreground" />
-          Coming Soon
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {integrations.filter(i => i.status === 'coming_soon').map((integration, index) => (
-            <motion.div
-              key={integration.name}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card className="p-5 opacity-75">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                      {integration.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm">{integration.name}</h3>
-                      {getStatusBadge(integration.status)}
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {integration.description}
-                  </p>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Help Section */}
-      <Card className="p-6 bg-muted/50">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <h3 className="font-semibold mb-1">Need Help Setting Up?</h3>
-            <p className="text-sm text-muted-foreground">
-              Our team can help you configure your integrations. Book a setup call
-              or check our documentation.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link to="/contact">
-              <Button variant="outline" size="sm">
-                Contact Support
+          {needsSetup.length > 0 && needsSetup[0].action && (
+            <Link to={needsSetup[0].action.to} className="shrink-0">
+              <Button>
+                {needsSetup[0].action.label}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </Button>
             </Link>
-          </div>
+          )}
         </div>
       </Card>
 
-      {/* Notes */}
-      <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-900/50">
-        <div className="flex gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-green-800 dark:text-green-200">
-              Core Systems Operational
-            </p>
-            <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-              Your CRM is fully operational with AI-powered responses, SMS via Twilio, and payment processing via Stripe.
-              Additional integrations are being added based on customer feedback - let us know what you need!
-            </p>
-          </div>
+      {/* Active capabilities */}
+      <div className="space-y-3">
+        {active.map((capability, index) => (
+          <motion.div
+            key={capability.title}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.04 }}
+          >
+            <Card className="p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    capability.status === 'live'
+                      ? 'bg-success/10 text-success'
+                      : 'bg-warning/10 text-warning'
+                  }`}
+                >
+                  {capability.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 className="font-semibold">{capability.title}</h3>
+                    <StatusPill status={capability.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{capability.plainEnglish}</p>
+                </div>
+                {capability.action && (
+                  <Link to={capability.action.to} className="shrink-0">
+                    <Button variant="outline" size="sm">
+                      {capability.action.label}
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Coming soon */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold">On the way</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {upcoming.map((capability) => (
+            <Card key={capability.title} className="p-5">
+              <div className="flex gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  {capability.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 className="text-sm font-semibold">{capability.title}</h3>
+                    <StatusPill status={capability.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{capability.plainEnglish}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       </div>
+
+      <Card className="bg-muted/50 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="mb-1 font-semibold">Want something that isn't here?</h3>
+            <p className="text-sm text-muted-foreground">
+              Tell us what you'd use and we'll build the ones people actually ask for.
+            </p>
+          </div>
+          <Link to="/contact" className="shrink-0">
+            <Button variant="outline" size="sm">
+              Get in touch
+            </Button>
+          </Link>
+        </div>
+      </Card>
     </div>
   );
 }

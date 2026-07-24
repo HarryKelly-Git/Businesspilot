@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Toaster } from 'react-hot-toast';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -110,6 +111,21 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <AuthProvider>
         <App />
+        {/* Without this, every toast.success/toast.error in the app renders nothing. */}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: 'hsl(var(--card))',
+              color: 'hsl(var(--foreground))',
+              border: '1px solid hsl(var(--border))',
+              fontSize: '14px',
+            },
+            success: { iconTheme: { primary: 'hsl(var(--success))', secondary: 'white' } },
+            error: { iconTheme: { primary: 'hsl(var(--destructive))', secondary: 'white' } },
+          }}
+        />
       </AuthProvider>
     </ThemeProvider>
   </ErrorBoundary>

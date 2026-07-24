@@ -1,6 +1,6 @@
 -- Add incoming_messages table for tracking raw SMS/web messages
 CREATE TABLE incoming_messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
   lead_id UUID REFERENCES leads(id),
   phone TEXT NOT NULL,

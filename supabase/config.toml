@@ -1,0 +1,29 @@
+project_id = "rxrzlhdtbwuqvmgbrcmz"
+
+# ---------------------------------------------------------------------------
+# Edge function JWT verification
+#
+# By default Supabase's gateway requires a valid Supabase JWT on every function
+# call and rejects anything else with 401 before our code runs. That is what we
+# want for functions the dashboard calls — but Twilio and Stripe are third
+# parties that have never heard of Supabase and send their own signature header
+# instead. Left at the default, their webhooks would 401 and silently fail.
+#
+# The two functions below therefore turn the gateway check off and authenticate
+# the caller themselves, cryptographically:
+#   - twilio-webhook verifies X-Twilio-Signature  (HMAC-SHA1, TWILIO_AUTH_TOKEN)
+#   - stripe-webhook verifies Stripe-Signature    (HMAC-SHA256, STRIPE_WEBHOOK_SECRET)
+#
+# Do NOT add other functions here. Everything omitted keeps gateway JWT
+# verification on, which is the safe default.
+# ---------------------------------------------------------------------------
+
+[functions.twilio-webhook]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+# ai-demo is public (marketing site, pre-signup) but the widget sends the anon
+# key as a Bearer token, so the default JWT check passes. It is rate-limited in
+# code. Left at the default deliberately.

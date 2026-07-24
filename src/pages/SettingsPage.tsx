@@ -17,6 +17,8 @@ import {
 import { Card, Button, Input, Select, Textarea, Badge, Spinner, Modal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useBusiness } from '../hooks/useData';
+import { useSubscription } from '../hooks/useSubscription';
+import { STRIPE_PRODUCTS } from '../stripe-config';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -36,14 +38,21 @@ const toneOptions = [
   { value: 'casual', label: 'Casual & Relaxed' },
 ];
 
+// Average NZ trade job value, used to express plan cost as "jobs to break even".
+const AVG_JOB_VALUE_NZD = 350;
+
 export function SettingsPage() {
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { business, updateBusiness } = useBusiness();
+  const {
+    subscription,
+    loading: subscriptionLoading,
+    product: currentProduct,
+  } = useSubscription(business?.id ?? null);
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('business');
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
@@ -77,7 +86,8 @@ export function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Load settings
+  // Load settings. Note: no local `loading` flag here — the page must render even when
+  // there is no business yet, otherwise Settings hangs on a spinner forever.
   useEffect(() => {
     if (business) {
       setBusinessName(business.name || '');
@@ -99,7 +109,6 @@ export function SettingsPage() {
         setTransferInstructions((settings.transferInstructions as string) || '');
         setFaqs((settings.faqs as Array<{ question: string; answer: string }>) || []);
       }
-      setLoading(false);
     }
   }, [business]);
 
@@ -261,10 +270,23 @@ export function SettingsPage() {
     }
   };
 
-  if (loading) {
+  // Only block on auth actually resolving. Everything below renders fine without a business.
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
+
+  if (!business) {
+    return (
+      <div className="max-w-md mx-auto text-center py-20 px-4">
+        <h1 className="text-2xl font-bold mb-2">Finish setting up first</h1>
+        <p className="text-muted-foreground mb-6">
+          Tell us about your business and we'll have your AI answering enquiries in under a minute.
+        </p>
+        <Button onClick={() => navigate('/onboarding')}>Complete setup</Button>
       </div>
     );
   }
@@ -565,41 +587,72 @@ export function SettingsPage() {
               <h2 className="text-lg font-semibold mb-6">Billing</h2>
               <div className="space-y-6 max-w-lg">
                 <div className="p-4 bg-muted rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between gap-3 mb-2">
                     <span className="font-medium">Current Plan</span>
-                    <Badge variant="success">Growth</Badge>
+                    {subscriptionLoading ? (
+                      <Spinner className="h-4 w-4" />
+                    ) : currentProduct ? (
+                      <Badge variant="success">{currentProduct.name}</Badge>
+                    ) : (
+                      <Badge variant="muted">No active plan</Badge>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">$99/month</p>
+                  <p className="text-sm text-muted-foreground">
+                    {subscriptionLoading
+                      ? 'Checking your subscription…'
+                      : currentProduct
+                      ? `${currentProduct.currencySymbol}${currentProduct.price.toFixed(0)}/month`
+                      : "You're on the free trial. Pick a plan to keep your AI answering after it ends."}
+                  </p>
+                  {subscription?.cancelAtPeriodEnd && subscription.currentPeriodEnd && (
+                    <p className="text-sm text-warning mt-2">
+                      Cancels on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium">Available Plans</h3>
-                  {[
-                    { name: 'Starter', price: 29, current: false },
-                    { name: 'Growth', price: 99, current: true },
-                    { name: 'Pro', price: 299, current: false },
-                  ].map((plan) => (
-                    <div
-                      key={plan.name}
-                      className={`p-4 rounded-lg border ${plan.current ? 'border-primary bg-primary/5' : 'border-border'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">{plan.name}</span>
-                          <span className="text-sm text-muted-foreground ml-2">
-                            ${plan.price}/month
-                          </span>
+                  {Object.values(STRIPE_PRODUCTS).map((plan) => {
+                    const isCurrent = currentProduct?.priceId === plan.priceId;
+                    // Anchor every price to the outcome the owner actually cares about.
+                    const jobsToBreakEven = Math.max(1, Math.ceil(plan.price / AVG_JOB_VALUE_NZD));
+                    return (
+                      <div
+                        key={plan.priceId}
+                        className={`p-4 rounded-lg border ${
+                          isCurrent ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="font-medium">{plan.name}</span>
+                            <span className="text-sm text-muted-foreground ml-2">
+                              {plan.currencySymbol}
+                              {plan.price.toFixed(0)}/month
+                            </span>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Pays for itself with {jobsToBreakEven} extra job
+                              {jobsToBreakEven > 1 ? 's' : ''} a month
+                            </p>
+                          </div>
+                          {isCurrent ? (
+                            <Badge variant="primary">Current</Badge>
+                          ) : (
+                            <Link to="/pricing" className="shrink-0">
+                              <Button variant="outline" size="sm">
+                                {currentProduct && plan.price < currentProduct.price
+                                  ? 'Downgrade'
+                                  : currentProduct
+                                  ? 'Upgrade'
+                                  : 'Choose'}
+                              </Button>
+                            </Link>
+                          )}
                         </div>
-                        {plan.current ? (
-                          <Badge variant="primary">Current</Badge>
-                        ) : (
-                          <Button variant="outline" size="sm">
-                            {plan.price > 99 ? 'Upgrade' : 'Downgrade'}
-                          </Button>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="pt-4 border-t">

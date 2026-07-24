@@ -1,11 +1,21 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  adminClient,
+  corsHeaders,
+  getAuthenticatedUserId,
+  json,
+  ownsLead,
+} from "../_shared/auth.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const VALID_STATUSES = [
+  "new",
+  "contacted",
+  "qualified",
+  "quoted",
+  "negotiating",
+  "converted",
+  "lost",
+];
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -13,37 +23,35 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: "Method not allowed" }, 405);
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) {
+      return json({ error: "Unauthorized" }, 401);
+    }
 
-    const body = await req.json();
-    const { lead_id, status } = body;
+    const { lead_id, status } = await req.json();
 
     if (!lead_id || !status) {
-      return new Response(
-        JSON.stringify({ error: "lead_id and status are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return json({ error: "lead_id and status are required" }, 400);
+    }
+
+    if (!VALID_STATUSES.includes(status)) {
+      return json(
+        { error: "Invalid status. Must be one of: " + VALID_STATUSES.join(", ") },
+        400
       );
     }
 
-    // Validate status
-    const validStatuses = ["new", "contacted", "qualified", "quoted", "negotiating", "converted", "lost"];
-    if (!validStatuses.includes(status)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid status. Must be one of: " + validStatuses.join(", ") }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const supabase = adminClient();
+
+    // Without this check any caller could mutate any lead in any account by id.
+    if (!(await ownsLead(supabase, userId, lead_id))) {
+      return json({ error: "Lead not found" }, 404);
     }
 
-    // Update lead status
     const updateData: Record<string, unknown> = {
       status,
       last_contacted_at: new Date().toISOString(),
@@ -53,17 +61,11 @@ Deno.serve(async (req: Request) => {
       updateData.converted_at = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from("leads")
-      .update(updateData)
-      .eq("id", lead_id);
+    const { error } = await supabase.from("leads").update(updateData).eq("id", lead_id);
 
     if (error) {
       console.error("Error updating lead:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to update lead status" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ error: "Failed to update lead status" }, 500);
     }
 
     // End any active conversations
@@ -73,19 +75,9 @@ Deno.serve(async (req: Request) => {
       .eq("lead_id", lead_id)
       .is("ended_at", null);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        lead_id,
-        status,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ success: true, lead_id, status });
   } catch (error) {
     console.error("Error marking lead:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: "Internal server error" }, 500);
   }
 });

@@ -1,28 +1,54 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { corsHeaders, json } from "../_shared/auth.ts";
+import { anthropic, HAIKU_MODEL } from "../_shared/ai.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+/**
+ * Public demo widget on the marketing site. Intentionally unauthenticated —
+ * it runs before signup — so it needs its own abuse controls.
+ */
+const MAX_MESSAGE_LENGTH = 500;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 8;
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+// Per-instance sliding window. Edge instances are ephemeral so this is a speed
+// bump, not a guarantee — it stops casual abuse of the Anthropic bill.
+const requestLog = new Map<string, number[]>();
 
-// System prompt that will be cached - generic for demo purposes
-const SYSTEM_PROMPT = `You are a helpful AI assistant for a trade/service business. Your job is to respond to customer enquiries professionally and helpfully.
+function isRateLimited(clientId: string): boolean {
+  const now = Date.now();
+  const recent = (requestLog.get(clientId) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
 
-Your goals:
-1. Acknowledge the customer's enquiry
-2. Gather necessary information (service needed, location, preferred time)
-3. Offer to help schedule or provide a quote
-4. Be concise - responses should be under 200 characters for SMS when possible
+  if (recent.length >= RATE_LIMIT_MAX_REQUESTS) {
+    requestLog.set(clientId, recent);
+    return true;
+  }
 
-Always be:
-- Friendly and professional
-- Helpful and responsive
-- Focused on getting the customer scheduled or their question answered
+  recent.push(now);
+  requestLog.set(clientId, recent);
 
-Respond as if you're the business responding to a potential customer.`;
+  // Keep the map from growing without bound
+  if (requestLog.size > 5000) {
+    for (const [key, times] of requestLog) {
+      if (times.every((t) => now - t >= RATE_LIMIT_WINDOW_MS)) requestLog.delete(key);
+    }
+  }
+
+  return false;
+}
+
+const SYSTEM_PROMPT = `You are the AI receptionist for a local trade or service business, replying to a customer enquiry by SMS. This is a live demo on the BusinessPilot website, so the person messaging you is a business owner trying you out.
+
+YOUR JOB
+Show them what their customers would experience. Reply instantly, sound like a real person from the business, and work towards booking the job.
+
+RULES
+- Keep replies under 160 characters where you can. This is SMS.
+- Ask ONE qualifying question per message — never a numbered list.
+- Qualify on: how urgent it is, what exactly is needed, and where they are.
+- Never invent specific prices, times, or availability. Say the owner will confirm.
+- Once you have enough detail, propose booking a time.
+- Sound warm and competent. Not corporate, not robotic.
+- Never say you are an AI unless asked directly.`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -30,127 +56,66 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Method not allowed" }, 405);
   }
 
   try {
-    const { message } = await req.json();
+    const clientId =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
 
-    if (!message) {
-      return new Response(JSON.stringify({ error: "Message is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (isRateLimited(clientId)) {
+      return json({ error: "You're going a bit fast — give it a moment and try again." }, 429);
     }
 
-    // If Anthropic API key is configured, use Claude 3 Haiku (fast and cheap)
-    if (ANTHROPIC_API_KEY) {
-      try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-3-haiku-20240307",
-            max_tokens: 200,
-            system: [
-              {
-                type: "text",
-                text: SYSTEM_PROMPT,
-                cache_control: { type: "ephemeral" }
-              }
-            ],
-            messages: [
-              { role: "user", content: message }
-            ],
-          }),
-        });
+    const { message, history } = await req.json();
 
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.content?.[0]?.text;
-          if (text) {
-            // Log usage for monitoring (including cache hits)
-            console.log("AI API usage:", {
-              model: "claude-3-haiku",
-              input_tokens: data.usage?.input_tokens,
-              output_tokens: data.usage?.output_tokens,
-              cache_read_tokens: data.usage?.cache_read_input_tokens || 0,
-              cache_creation_tokens: data.usage?.cache_creation_input_tokens || 0,
-            });
-
-            return new Response(JSON.stringify({ response: text.trim() }), {
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Anthropic API error:", error);
-      }
+    if (!message || typeof message !== "string") {
+      return json({ error: "Message is required" }, 400);
     }
 
-    // Fallback: rule-based responses
-    const lowerMessage = message.toLowerCase();
-
-    if (lowerMessage.includes("emergency") || lowerMessage.includes("urgent") || lowerMessage.includes("burst") || lowerMessage.includes("flooding")) {
-      const response = "I understand this is urgent! I'm dispatching someone right away. Please call us directly for immediate assistance. If safe, try shutting off the main water supply.";
-      return new Response(JSON.stringify({ response }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return json({ error: "That message is too long for a demo." }, 400);
     }
 
-    if (lowerMessage.includes("quote") || lowerMessage.includes("price") || lowerMessage.includes("cost")) {
-      const response = "I'd be happy to get you a quote! Could you share what you need? For example, scope of work and location? I'll have a detailed estimate within the hour.";
-      return new Response(JSON.stringify({ response }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!anthropic) {
+      // Don't dress a hardcoded string up as an AI reply.
+      return json({ error: "The demo is temporarily unavailable." }, 503);
     }
 
-    if (lowerMessage.includes("schedule") || lowerMessage.includes("appointment") || lowerMessage.includes("availability")) {
-      const response = "I'd love to get you scheduled! What day works best? I have openings this week. Morning or afternoon preference?";
-      return new Response(JSON.stringify({ response }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const priorTurns: Array<{ role: string; content: string }> = Array.isArray(history)
+      ? history.slice(-6)
+      : [];
 
-    if (lowerMessage.includes("ac") || lowerMessage.includes("air conditioning") || lowerMessage.includes("hvac") || lowerMessage.includes("heating") || lowerMessage.includes("furnace")) {
-      const response = "I can help! Let me ask: is the unit making any noise? When did it stop? I'll have a technician out today if needed.";
-      return new Response(JSON.stringify({ response }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (lowerMessage.includes("electric") || lowerMessage.includes("outlet") || lowerMessage.includes("wiring")) {
-      const response = "Electrical work needs a pro. Can you tell me more? For outlets, I'll need to know the room and existing wiring. Free estimates!";
-      return new Response(JSON.stringify({ response }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Default response
-    const response = "Thanks for reaching out! Could you tell me what service you need and when would work best? I'm here to help!";
-    return new Response(JSON.stringify({ response }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const response = await anthropic.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 200,
+      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [
+        ...priorTurns.map((m) => ({
+          role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+          content: String(m.content).slice(0, MAX_MESSAGE_LENGTH),
+        })),
+        { role: "user" as const, content: message },
+      ],
     });
 
+    console.log("Demo usage:", {
+      model: HAIKU_MODEL,
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_read_input_tokens: response.usage.cache_read_input_tokens ?? 0,
+    });
+
+    const block = response.content.find((b) => b.type === "text");
+    const text = block && block.type === "text" ? block.text.trim() : null;
+
+    if (!text) {
+      return json({ error: "The demo is temporarily unavailable." }, 503);
+    }
+
+    return json({ response: text });
   } catch (error) {
-    console.error("Error processing request:", error);
-    return new Response(JSON.stringify({ error: "Failed to process message" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("Error processing demo message:", error);
+    return json({ error: "The demo is temporarily unavailable." }, 503);
   }
 });

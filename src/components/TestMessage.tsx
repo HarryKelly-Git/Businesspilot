@@ -36,8 +36,7 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
       const response = await sendIncomingMessage(
         formData.phone,
         formData.message,
-        formData.name || undefined,
-        business?.id
+        formData.name || undefined
       );
 
       if (response.success) {
@@ -93,22 +92,27 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
               onClick={() => setIsOpen(false)}
             />
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Test incoming message"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-50 w-full max-w-md bg-card rounded-xl shadow-xl border border-border overflow-hidden"
+              // Flex column + scrollable body so the Send button stays reachable on a 375px screen.
+              className="fixed inset-x-4 top-4 bottom-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-h-[calc(100dvh-2rem)] z-50 flex flex-col max-w-md mx-auto bg-card rounded-xl shadow-xl border border-border overflow-hidden"
             >
-              <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex shrink-0 items-center justify-between p-4 border-b border-border">
                 <h2 className="text-lg font-semibold">Test Incoming Message</h2>
                 <button
                   onClick={() => setIsOpen(false)}
+                  aria-label="Close dialog"
                   className="p-2 rounded-lg hover:bg-muted transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Simulate an incoming SMS from a customer. This will create a lead and generate an AI response.
                 </p>

@@ -1,20 +1,22 @@
-import React from 'react';
 import { Check, Zap, ArrowRight, Sparkles, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { STRIPE_PRODUCTS } from '../stripe-config';
+import { STRIPE_PRODUCTS, type ProductKey } from '../stripe-config';
 import { useCheckout } from '../hooks/useCheckout';
 import { useSubscription } from '../hooks/useSubscription';
+import { useAuth } from '../contexts/AuthContext';
 
-interface PricingPageProps {
-  businessId?: string | null;
-}
+// Average NZ trade job value — used to express price as jobs-to-break-even.
+const AVG_JOB_VALUE_NZD = 350;
 
-export default function PricingPage({ businessId = null }: PricingPageProps) {
+export default function PricingPage() {
   const navigate = useNavigate();
-  const { subscription } = useSubscription(businessId);
+  // Previously read from a prop that App.tsx never passed, so the current plan
+  // was never highlighted.
+  const { business } = useAuth();
+  const { subscription } = useSubscription(business?.id ?? null);
   const { startCheckout, loading, error } = useCheckout();
 
-  const products = Object.values(STRIPE_PRODUCTS);
+  const products = Object.entries(STRIPE_PRODUCTS) as [ProductKey, typeof STRIPE_PRODUCTS[ProductKey]][];
 
   return (
     <div className="min-h-screen bg-gray-950 py-16 px-4">
@@ -48,11 +50,12 @@ export default function PricingPage({ businessId = null }: PricingPageProps) {
 
         {/* Plans */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {products.map((product) => {
+          {products.map(([planKey, product]) => {
             const isCurrentPlan =
               subscription?.priceId === product.priceId ||
               subscription?.planName?.toLowerCase() === product.name.toLowerCase();
             const isPopular = 'popular' in product && product.popular;
+            const jobsToBreakEven = Math.max(1, Math.ceil(product.price / AVG_JOB_VALUE_NZD));
 
             return (
               <div
@@ -103,6 +106,11 @@ export default function PricingPage({ businessId = null }: PricingPageProps) {
                     <span className="text-4xl font-bold text-white">{product.price.toFixed(0)}</span>
                     <span className={`text-sm ${isPopular ? 'text-indigo-200' : 'text-gray-500'}`}>/month</span>
                   </div>
+                  {/* Anchor the price to the outcome, not the cost. */}
+                  <p className={`text-sm mt-2 ${isPopular ? 'text-indigo-100' : 'text-emerald-400'}`}>
+                    Pays for itself with {jobsToBreakEven} extra job
+                    {jobsToBreakEven > 1 ? 's' : ''} a month
+                  </p>
                 </div>
 
                 {/* Features */}
@@ -125,7 +133,7 @@ export default function PricingPage({ businessId = null }: PricingPageProps) {
 
                 {/* CTA */}
                 <button
-                  onClick={() => !isCurrentPlan && !loading && startCheckout(product)}
+                  onClick={() => !isCurrentPlan && !loading && startCheckout(planKey)}
                   disabled={loading || isCurrentPlan}
                   className={`w-full py-3 px-5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                     isCurrentPlan

@@ -1,5 +1,7 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- UUID generation uses gen_random_uuid(), built into Postgres 13+ and always on
+-- the search path. The uuid-ossp extension is deliberately NOT used: Supabase
+-- installs it into the `extensions` schema, so unqualified uuid_generate_v4()
+-- calls fail during migration with "function does not exist" (SQLSTATE 42883).
 
 -- Profiles table (extends auth.users)
 CREATE TABLE profiles (
@@ -14,7 +16,7 @@ CREATE TABLE profiles (
 
 -- Businesses table
 CREATE TABLE businesses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   industry TEXT NOT NULL,
@@ -36,7 +38,7 @@ CREATE TABLE businesses (
 
 -- Leads table
 CREATE TABLE leads (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   email TEXT,
@@ -61,7 +63,7 @@ CREATE TABLE leads (
 
 -- Missed calls table
 CREATE TABLE missed_calls (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   caller_phone TEXT NOT NULL,
   caller_name TEXT,
@@ -78,7 +80,7 @@ CREATE TABLE missed_calls (
 
 -- Appointments table
 CREATE TABLE appointments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   lead_id UUID REFERENCES leads(id),
   customer_name TEXT NOT NULL,
@@ -99,7 +101,7 @@ CREATE TABLE appointments (
 
 -- AI Actions/Recommendations table
 CREATE TABLE ai_actions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   priority TEXT DEFAULT 'medium',
@@ -117,7 +119,7 @@ CREATE TABLE ai_actions (
 
 -- Activity log table
 CREATE TABLE activity_log (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   user_id UUID REFERENCES profiles(id),
   action_type TEXT NOT NULL,
@@ -130,7 +132,7 @@ CREATE TABLE activity_log (
 
 -- Subscriptions table (Stripe)
 CREATE TABLE subscriptions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT,
@@ -146,7 +148,7 @@ CREATE TABLE subscriptions (
 
 -- Industry templates table
 CREATE TABLE industry_templates (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   industry TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   services TEXT[] NOT NULL,
@@ -158,7 +160,7 @@ CREATE TABLE industry_templates (
 
 -- AI conversations table
 CREATE TABLE ai_conversations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   lead_id UUID REFERENCES leads(id),
   channel TEXT DEFAULT 'web',
@@ -171,7 +173,7 @@ CREATE TABLE ai_conversations (
 
 -- Daily metrics table (for reporting)
 CREATE TABLE daily_metrics (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   leads_received INTEGER DEFAULT 0,

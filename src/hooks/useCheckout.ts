@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { StripeProduct } from '../stripe-config';
+import type { ProductKey } from '../stripe-config';
 
 export function useCheckout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startCheckout = async (product: StripeProduct) => {
+  /**
+   * Sends only the plan key. The edge function resolves that to a Stripe Price
+   * ID from its own secrets, so the price can't be chosen by the client.
+   */
+  const startCheckout = async (planKey: ProductKey) => {
     setLoading(true);
     setError(null);
 
@@ -17,33 +21,31 @@ export function useCheckout() {
 
       if (!session) throw new Error('You must be logged in to subscribe.');
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ plan_key: planKey }),
+        }
+      );
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          price_id: product.priceId,
-          mode: product.mode,
-          success_url: `${window.location.origin}/checkout/success`,
-          cancel_url: `${window.location.origin}/pricing`,
-        }),
-      });
+      const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error ?? 'Failed to create checkout session.');
+        throw new Error(payload.error ?? 'Could not start checkout.');
       }
 
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
+      if (payload.url) {
+        window.location.href = payload.url;
+      } else {
+        throw new Error('Could not start checkout.');
       }
-    } catch (err: any) {
-      setError(err.message ?? 'Something went wrong.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
       setLoading(false);
     }
   };

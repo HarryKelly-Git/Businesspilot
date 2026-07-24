@@ -27,7 +27,6 @@ import { IndustryCalculator } from '../components/home/IndustryCalculator';
 import { AIDemoWidget } from '../components/home/AIDemoWidget';
 import { ResponseComparison } from '../components/home/ResponseComparison';
 import { LeakScore } from '../components/home/LeakScore';
-import { LiveStats } from '../components/home/LiveStats';
 import { industries } from '../lib/industries';
 
 const features = [
@@ -308,9 +307,6 @@ export function HomePage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Live Stats - Real data from database */}
-      <LiveStats />
 
       {/* Features Section */}
       <section id="features" className="py-20 lg:py-28 bg-muted/30">
