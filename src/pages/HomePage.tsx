@@ -24,7 +24,8 @@ import { SalesAIChat } from '../components/SalesAIChat';
 import { Logo, LogoMark } from '../components/Logo';
 import { useTheme } from '../contexts/ThemeContext';
 import { IndustryCalculator } from '../components/home/IndustryCalculator';
-import { AIDemoWidget } from '../components/home/AIDemoWidget';
+import { SMSDemoThread } from '../components/home/SMSDemoThread';
+import { Testimonials } from '../components/home/Testimonials';
 import { ResponseComparison } from '../components/home/ResponseComparison';
 import { LeakScore } from '../components/home/LeakScore';
 import { industries } from '../lib/industries';
@@ -73,6 +74,9 @@ const trustBadges = [
   { icon: Check, text: 'No credit card required' },
   { icon: Zap, text: 'Cancel anytime' },
 ];
+
+// Average NZ trade job value, used to express plan price as jobs-to-break-even.
+const AVG_JOB_VALUE_NZD = 350;
 
 const pricingPlans = [
   {
@@ -162,6 +166,7 @@ export function HomePage() {
             <div className="hidden md:flex items-center gap-4">
               <button
                 onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 className="p-2 rounded-lg hover:bg-muted transition-colors"
               >
                 {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -177,12 +182,15 @@ export function HomePage() {
             <div className="md:hidden flex items-center gap-2">
               <button
                 onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 className="p-2 rounded-lg hover:bg-muted transition-colors"
               >
                 {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={mobileMenuOpen}
                 className="p-2 rounded-lg hover:bg-muted transition-colors"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -231,7 +239,7 @@ export function HomePage() {
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] text-sm font-semibold mb-8">
                 <Users className="w-4 h-4" />
-                Built for Appointment-Driven Businesses
+                Built for tradies, clinics and service businesses
               </div>
             </motion.div>
 
@@ -241,8 +249,8 @@ export function HomePage() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="hero-headline mb-6"
             >
-              Stop Losing Jobs to{' '}
-              <span className="text-gradient">Slower Response Times</span>
+              Every missed call, answered in seconds and{' '}
+              <span className="text-gradient">booked into your calendar</span>
             </motion.h1>
 
             <motion.p
@@ -251,26 +259,33 @@ export function HomePage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
             >
-              Every missed call is a lost job. Capture every enquiry, respond instantly,
-              and book more jobs without hiring staff or working evenings.
+              You're under a house or up a ladder, so the call goes to voicemail — and they ring
+              the next name on the list. BusinessPilot texts them back within seconds, works out
+              what they need, and books the job. Even at 11pm.
             </motion.p>
 
+            {/* One dominant action. The secondary path is a text link so it can't
+                compete with the primary CTA for attention. */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              className="flex flex-col items-center justify-center gap-4"
             >
-              <Link to="/auth?signup=true">
-                <Button size="lg" className="px-8 py-4 text-base">
-                  Start 14-Day Free Trial
-                  <ArrowRight className="w-5 h-5 ml-2" />
+              <Link to="/auth?signup=true" className="w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto px-10 py-5 text-lg font-bold shadow-xl shadow-[hsl(var(--accent))]/20"
+                >
+                  Start free — no card needed
+                  <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
                 </Button>
               </Link>
-              <a href="#features">
-                <Button variant="outline" size="lg" className="px-8 py-4 text-base">
-                  See How It Works
-                </Button>
+              <a
+                href="#demo"
+                className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+              >
+                See a real conversation first
               </a>
             </motion.div>
 
@@ -399,6 +414,12 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* The single most persuasive element on the page — proof the product works,
+          before they've signed up. Static by design so it can never fail to load. */}
+      <div id="demo">
+        <SMSDemoThread />
+      </div>
+
       {/* Response Speed Comparison */}
       <ResponseComparison />
 
@@ -407,9 +428,6 @@ export function HomePage() {
 
       {/* Leak Score Quiz */}
       <LeakScore />
-
-      {/* AI Demo Widget */}
-      <AIDemoWidget />
 
       {/* Industries Section */}
       <section id="industries" className="py-20 lg:py-28 bg-muted/30">
@@ -445,7 +463,9 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* TODO: Replace founder's note with real customer testimonials once available */}
+      {/* Renders only once real quotes exist — see Testimonials.tsx */}
+      <Testimonials />
+
       {/* Founder's Note Section */}
       <section className="py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -534,10 +554,17 @@ export function HomePage() {
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
 
-                <div className="mb-6">
-                  <span className="text-4xl font-extrabold">${plan.price}</span>
+                <div className="mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">NZ$</span>
+                  <span className="text-4xl font-extrabold">{plan.price}</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
+                {/* Anchor to the outcome, not the cost. */}
+                <p className="mb-6 text-sm font-semibold text-[hsl(var(--success))]">
+                  Pays for itself with{' '}
+                  {Math.max(1, Math.ceil(plan.price / AVG_JOB_VALUE_NZD))} extra job
+                  {Math.ceil(plan.price / AVG_JOB_VALUE_NZD) > 1 ? 's' : ''} a month
+                </p>
 
                 <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((feature) => (

@@ -28,10 +28,13 @@ export function IndustryCalculator() {
 
   const yearlyLoss = monthlyLoss * 12;
 
-  // ROI calculation: pays for itself if recovers X jobs per period
+  // ROI: how many recovered jobs it takes to cover the plan.
+  // Note: previously this also computed a "weeks to recover" figure as
+  // 30 / (jobsToRecover * 30), which algebraically collapses to 1/jobsToRecover
+  // and always rounded to 1 — it claimed "one extra job every 1 week" for every
+  // trade regardless of input. Removed rather than shown wrong.
   const growthPlanCost = 99;
-  const jobsToRecoverMonthly = growthPlanCost / avgJobValue;
-  const weeksToRecover = jobsToRecoverMonthly > 0 ? Math.ceil(30 / (jobsToRecoverMonthly * 30)) : 0;
+  const jobsToRecoverMonthly = Math.max(1, Math.ceil(growthPlanCost / avgJobValue));
 
   return (
     <section className="py-20 lg:py-28 bg-muted/30">
@@ -153,58 +156,48 @@ export function IndustryCalculator() {
               </div>
             </div>
 
-            {/* Results */}
+            {/* Results — the monthly loss is the emotional number, so it dominates. */}
             <div className="mt-10 pt-8 border-t border-border">
-              <div className="grid md:grid-cols-2 gap-6">
-                <motion.div
-                  key={monthlyLoss}
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-center p-6 bg-red-500/5 rounded-xl border border-red-500/20"
-                >
-                  <Calculator className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-1">Monthly Revenue Lost</p>
-                  <p className="text-4xl font-extrabold text-red-500 animate-count-up">
-                    ${monthlyLoss.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Based on {missedCalls} missed calls at {closeRate}% close rate
-                  </p>
-                </motion.div>
+              <motion.div
+                key={monthlyLoss}
+                initial={{ scale: 0.97, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="rounded-2xl border-2 border-red-500/30 bg-red-500/5 p-8 text-center"
+              >
+                <div className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-red-500">
+                  <Calculator className="h-4 w-4" aria-hidden="true" />
+                  You are losing approximately
+                </div>
+                <p className="text-6xl font-extrabold leading-none text-red-500 sm:text-7xl">
+                  ${monthlyLoss.toLocaleString()}
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">every month</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  ${yearlyLoss.toLocaleString()} a year · based on {missedCalls} missed calls at a{' '}
+                  {closeRate}% close rate
+                </p>
+              </motion.div>
 
-                <motion.div
-                  key={yearlyLoss}
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-center p-6 bg-green-500/5 rounded-xl border border-green-500/20"
-                >
-                  <DollarSign className="w-10 h-10 text-green-500 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-1">Yearly Revenue Lost</p>
-                  <p className="text-4xl font-extrabold text-green-500 animate-count-up">
-                    ${yearlyLoss.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    That's a {((yearlyLoss / growthPlanCost) | 0)}x return on your investment
-                  </p>
-                </motion.div>
-              </div>
-
-              {/* ROI Framing */}
-              <div className="mt-6 p-4 bg-[hsl(var(--accent))]/5 border border-[hsl(var(--accent))]/20 rounded-xl">
-                <p className="text-center text-sm font-medium">
-                  <span className="text-[hsl(var(--accent))]">Based on your numbers:</span> BusinessPilot pays for itself if it recovers just{' '}
-                  <span className="font-extrabold text-foreground">{Math.max(1, Math.ceil(jobsToRecoverMonthly))} job{jobsToRecoverMonthly > 1 ? 's' : ''}</span> per month.
-                  That's one extra{' '}
-                  <span className="font-extrabold">{selectedIndustry.shortName.toLowerCase()}</span> job every{' '}
-                  <span className="font-extrabold">{Math.max(1, weeksToRecover)} week{weeksToRecover > 1 ? 's' : ''}</span>.
+              {/* ROI framing */}
+              <div className="mt-6 rounded-xl border border-[hsl(var(--success))]/20 bg-[hsl(var(--success))]/5 p-5">
+                <p className="text-center text-base font-medium">
+                  BusinessPilot pays for itself if it books you just{' '}
+                  <span className="text-xl font-extrabold text-[hsl(var(--success))]">
+                    {jobsToRecoverMonthly} extra {selectedIndustry.shortName.toLowerCase()} job
+                    {jobsToRecoverMonthly > 1 ? 's' : ''}
+                  </span>{' '}
+                  a month.
+                </p>
+                <p className="mt-1 text-center text-sm text-muted-foreground">
+                  At NZ$99/month on the Growth plan.
                 </p>
               </div>
 
               <div className="mt-8 text-center">
                 <Link to="/auth?signup=true">
-                  <Button size="lg" className="px-8">
-                    Start Recovering Revenue
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                  <Button size="lg" className="px-8 py-5 text-lg font-bold">
+                    Start recovering this revenue — free for 14 days
+                    <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
                   </Button>
                 </Link>
 
