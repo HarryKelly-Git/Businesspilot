@@ -1,0 +1,14 @@
+{
+  "name": "BusinessPilot",
+  "short_name": "BusinessPilot",
+  "description": "Every missed call, answered in seconds and booked into your calendar.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2d3748",
+  "theme_color": "#2d3748",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

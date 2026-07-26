@@ -2,16 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- Favicons. iOS Safari ignores SVG icons entirely, which is why the icon
+         was missing on mobile — it needs a PNG apple-touch-icon. Android/Chrome
+         reads the manifest; desktop uses the SVG; .ico covers older browsers. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-192.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="BusinessPilot" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="description" content="BusinessPilot AI - Your AI Employee That Never Misses A Lead. Automatically follow up enquiries, recover missed calls, book appointments, and grow your business." />
-    <meta name="theme-color" content="#3b82f6" />
+    <meta name="theme-color" content="#2d3748" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="BusinessPilot AI - Your AI Employee That Never Misses A Lead" />
     <meta property="og:description" content="Automatically follow up enquiries, recover missed calls, book appointments, and grow your business." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://businesspilot.ai" />
+    <meta property="og:url" content="https://thebusinesspilot.com" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />

@@ -37,13 +37,13 @@ export function IndustryCalculator() {
   const jobsToRecoverMonthly = Math.max(1, Math.ceil(growthPlanCost / avgJobValue));
 
   return (
-    <section className="py-20 lg:py-28 bg-muted/30">
+    <section className="py-12 sm:py-16 lg:py-28 bg-muted/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold mb-4">
             <TrendingDown className="w-4 h-4" />
@@ -62,7 +62,7 @@ export function IndustryCalculator() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-card rounded-2xl border border-border p-8 shadow-xl"
+            className="bg-card rounded-2xl border border-border p-5 sm:p-8 shadow-xl"
           >
             {/* Industry Selection */}
             <div className="mb-8">
@@ -162,7 +162,7 @@ export function IndustryCalculator() {
                 key={monthlyLoss}
                 initial={{ scale: 0.97, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="rounded-2xl border-2 border-red-500/30 bg-red-500/5 p-8 text-center"
+                className="rounded-2xl border-2 border-red-500/30 bg-red-500/5 p-6 sm:p-8 text-center"
               >
                 <div className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-red-500">
                   <Calculator className="h-4 w-4" aria-hidden="true" />

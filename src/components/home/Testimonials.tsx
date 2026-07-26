@@ -35,7 +35,7 @@ export function Testimonials() {
   if (testimonials.length === 0) return null;
 
   return (
-    <section className="bg-muted/30 py-20 lg:py-28">
+    <section className="bg-muted/30 py-12 sm:py-16 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--success))]/10 px-4 py-2 text-sm font-semibold text-[hsl(var(--success))]">

@@ -227,7 +227,7 @@ export function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-28 lg:pt-36 pb-20 lg:pb-28 overflow-hidden">
+      <section className="relative pt-24 sm:pt-28 lg:pt-36 pb-12 sm:pb-20 lg:pb-28 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary))]/5 via-transparent to-transparent" />
         <div className="absolute top-1/4 right-0 w-96 h-96 bg-[hsl(var(--accent))]/10 rounded-full blur-3xl -translate-y-1/2" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[hsl(var(--primary))]/5 rounded-full blur-3xl" />
@@ -315,7 +315,7 @@ export function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="mt-12 text-center"
+            className="mt-8 sm:mt-12 text-center"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))] text-sm font-medium">
               <Zap className="w-4 h-4" />
@@ -326,9 +326,9 @@ export function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 lg:py-28 bg-muted/30">
+      <section id="features" className="py-12 sm:py-16 lg:py-28 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
             <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">
               Capture More Jobs, Work Less Hours
             </h2>
@@ -363,9 +363,9 @@ export function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 lg:py-28">
+      <section className="py-12 sm:py-16 lg:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
             <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">
               How It Works
             </h2>
@@ -432,9 +432,9 @@ export function HomePage() {
       <LeakScore />
 
       {/* Industries Section */}
-      <section id="industries" className="py-20 lg:py-28 bg-muted/30">
+      <section id="industries" className="py-12 sm:py-16 lg:py-28 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">
               Built for Your Business
             </h2>
@@ -471,9 +471,9 @@ export function HomePage() {
       <FounderSection />
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 lg:py-28 bg-muted/30">
+      <section id="pricing" className="py-12 sm:py-16 lg:py-28 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-semibold mb-4">
               <Zap className="w-4 h-4" />
               14-Day Free Trial - No Credit Card
@@ -584,7 +584,7 @@ export function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 lg:py-28 bg-[hsl(var(--primary))] text-white">
+      <section className="py-12 sm:py-16 lg:py-28 bg-[hsl(var(--primary))] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">
             Start Capturing Every Enquiry Today

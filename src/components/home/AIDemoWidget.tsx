@@ -87,7 +87,7 @@ export function AIDemoWidget() {
   const isLocked = triesLeft <= 0;
 
   return (
-    <section className="py-20 lg:py-28 bg-muted/30">
+    <section className="py-12 sm:py-16 lg:py-28 bg-muted/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

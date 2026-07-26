@@ -64,13 +64,13 @@ const thread: Message[] = [
 
 export function SMSDemoThread() {
   return (
-    <section className="py-20 lg:py-28">
+    <section className="py-12 sm:py-16 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mx-auto mb-12 max-w-2xl text-center"
+          className="mx-auto mb-8 sm:mb-12 max-w-2xl text-center"
         >
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--primary))]/10 px-4 py-2 text-sm font-semibold text-[hsl(var(--primary))]">
             <Moon className="h-4 w-4" aria-hidden="true" />
@@ -85,7 +85,7 @@ export function SMSDemoThread() {
           </p>
         </motion.div>
 
-        <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[minmax(0,380px)_1fr]">
+        <div className="mx-auto grid max-w-5xl items-center gap-8 lg:gap-10 lg:grid-cols-[minmax(0,380px)_1fr]">
           {/* Phone */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}

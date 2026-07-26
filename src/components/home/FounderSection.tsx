@@ -18,7 +18,7 @@ import { ContactModal } from './ContactModal';
  * To add the portrait: save the image to  public/images/founder.jpg
  * (create the folder if needed), then set FOUNDER_PHOTO below.
  */
-const FOUNDER_NAME = '';
+const FOUNDER_NAME = 'James Miller';
 const FOUNDER_TITLE = 'Founder & CEO, BusinessPilot';
 const FOUNDER_PHOTO = '/images/founder.jpg';
 
@@ -29,10 +29,14 @@ const STORY_UNSIGNED = `We spent years watching small trade businesses lose jobs
 
 export function FounderSection() {
   const [contactOpen, setContactOpen] = useState(false);
+  // If the photo file is missing, fall back to initials rather than showing a
+  // broken-image icon — the section should never look broken.
+  const [photoOk, setPhotoOk] = useState(true);
   const signed = FOUNDER_NAME.trim().length > 0;
+  const initials = FOUNDER_NAME.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <section className="py-20 lg:py-28">
+    <section className="py-12 sm:py-16 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -40,16 +44,21 @@ export function FounderSection() {
           viewport={{ once: true }}
           className="mx-auto max-w-3xl"
         >
-          <div className="rounded-2xl border border-border bg-card p-8 text-center lg:p-12">
-            {signed ? (
+          <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8 lg:p-12">
+            {signed && photoOk ? (
               <img
                 src={FOUNDER_PHOTO}
                 alt={`${FOUNDER_NAME}, ${FOUNDER_TITLE}`}
                 width={112}
                 height={112}
                 loading="lazy"
+                onError={() => setPhotoOk(false)}
                 className="mx-auto mb-6 h-28 w-28 rounded-full object-cover shadow-lg ring-4 ring-[hsl(var(--accent))]/20"
               />
+            ) : signed ? (
+              <div className="mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] text-3xl font-bold text-white shadow-lg ring-4 ring-[hsl(var(--accent))]/20">
+                {initials}
+              </div>
             ) : (
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] shadow-lg">
                 <Heart className="h-9 w-9 text-white" aria-hidden="true" />
