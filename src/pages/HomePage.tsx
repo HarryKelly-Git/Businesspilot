@@ -28,6 +28,7 @@ import { IndustryCalculator } from '../components/home/IndustryCalculator';
 import { SMSDemoThread } from '../components/home/SMSDemoThread';
 import { Testimonials } from '../components/home/Testimonials';
 import { FounderSection } from '../components/home/FounderSection';
+import { WhyBusinessPilot } from '../components/home/WhyBusinessPilot';
 import { ResponseComparison } from '../components/home/ResponseComparison';
 import { LeakScore } from '../components/home/LeakScore';
 import { industries } from '../lib/industries';
@@ -469,6 +470,10 @@ export function HomePage() {
       <Testimonials />
 
       <FounderSection />
+
+      {/* Why BusinessPilot — sits immediately before pricing so the "one job
+          pays for it" line lands right as the visitor reaches the plans. */}
+      <WhyBusinessPilot />
 
       {/* Pricing Section */}
       <section id="pricing" className="py-12 sm:py-16 lg:py-28 bg-muted/30">
