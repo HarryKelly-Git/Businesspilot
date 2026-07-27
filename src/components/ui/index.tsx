@@ -25,8 +25,11 @@ export function Button({
     success: 'bg-success text-success-foreground hover:bg-success/90 focus:ring-success',
     warning: 'bg-warning text-warning-foreground hover:bg-warning/90 focus:ring-warning',
     destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive',
-    ghost: 'bg-transparent hover:bg-accent text-accent-foreground',
-    outline: 'border border-border bg-transparent hover:bg-accent text-accent-foreground',
+    // Resting text must be `foreground` (light in dark mode, dark in light mode)
+    // so the label is visible on a transparent background. accent-foreground is
+    // near-black and only belongs on the amber hover fill — hence hover:text-*.
+    ghost: 'bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
+    outline: 'border border-border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
   };
 
   const sizes = {
