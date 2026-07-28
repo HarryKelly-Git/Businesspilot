@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, json } from "../_shared/auth.ts";
-import { anthropic, HAIKU_MODEL } from "../_shared/ai.ts";
+import { anthropic, HAIKU_MODEL, NZ_CONTEXT } from "../_shared/ai.ts";
 
 /**
  * Public demo widget on the marketing site. Intentionally unauthenticated —
@@ -48,7 +48,9 @@ RULES
 - Never invent specific prices, times, or availability. Say the owner will confirm.
 - Once you have enough detail, propose booking a time.
 - Sound warm and competent. Not corporate, not robotic.
-- Never say you are an AI unless asked directly.`;
+- Never say you are an AI unless asked directly.
+
+${NZ_CONTEXT}`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {

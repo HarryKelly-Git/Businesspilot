@@ -5,49 +5,71 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// NZ dollars. Intl 'en-NZ' renders NZD as a bare "$", so we prefix "NZ$"
+// explicitly for clarity against AUD/USD.
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return (
+    'NZ$' +
+    new Intl.NumberFormat('en-NZ', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  );
 }
 
+// DD/MM/YYYY — New Zealand date order.
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat('en-NZ', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
   }).format(new Date(date));
 }
 
 export function formatDateTime(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat('en-NZ', {
+    day: '2-digit',
+    month: '2-digit',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
   }).format(new Date(date));
 }
 
 export function formatTime(time: string): string {
   const [hours, minutes] = time.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
+  const period = hours >= 12 ? 'pm' : 'am';
   const hour = hours % 12 || 12;
-  return `${hour}:${minutes.toString().padStart(2, '0')} ${period}`;
+  return `${hour}:${minutes.toString().padStart(2, '0')}${period}`;
 }
 
-export function formatPhone(phone: string): string {
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 10) {
-    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+/**
+ * Formats a New Zealand phone number for display.
+ * Mobiles (021/022/027/029) group as "0xx xxx xxxx"; landlines as "0x xxx xxxx"
+ * with the area code (03 Canterbury, 09 Auckland, 04 Wellington, 07 Waikato/BOP,
+ * 06 lower North Island). Accepts +64 / 64 / 0-prefixed input.
+ */
+export function formatNZPhone(phone: string): string {
+  let d = phone.replace(/[^\d+]/g, '');
+  if (d.startsWith('+64')) d = '0' + d.slice(3);
+  else if (d.startsWith('64') && !d.startsWith('0')) d = '0' + d.slice(2);
+
+  const mobilePrefixes = ['021', '022', '027', '029'];
+  if (mobilePrefixes.some((p) => d.startsWith(p))) {
+    // 0xx xxx xxxx / 0xx xxx xxx
+    return d.length >= 9
+      ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`.trim()
+      : d;
   }
-  if (cleaned.length === 11) {
-    return `+${cleaned[0]} (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+  if (d.startsWith('0') && d.length === 9) {
+    // Landline: 0x xxx xxxx
+    return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
   }
   return phone;
 }
+
+// Kept as an alias so existing imports keep working, now NZ-formatted.
+export const formatPhone = formatNZPhone;
 
 export function getInitials(name: string): string {
   return name

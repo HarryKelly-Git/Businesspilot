@@ -366,13 +366,13 @@ export function SettingsPage() {
                     onChange={(e) => setBusinessCity(e.target.value)}
                   />
                   <Input
-                    label="State"
+                    label="Suburb"
                     value={businessState}
                     onChange={(e) => setBusinessState(e.target.value)}
                   />
                 </div>
                 <Input
-                  label="ZIP Code"
+                  label="Postcode"
                   value={businessZip}
                   onChange={(e) => setBusinessZip(e.target.value)}
                 />

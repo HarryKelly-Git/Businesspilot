@@ -343,7 +343,7 @@ export function OnboardingPage() {
                     onChange={(e) => setBusinessCity(e.target.value)}
                   />
                   <Input
-                    label="State"
+                    label="Suburb"
                     placeholder="IL"
                     value={businessState}
                     onChange={(e) => setBusinessState(e.target.value)}

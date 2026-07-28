@@ -112,6 +112,21 @@ export interface BusinessContext {
 }
 
 /**
+ * New Zealand context so the AI understands Kiwi customers naturally — this is
+ * the difference between a US-tuned bot and one built for NZ trades. Shared by
+ * the customer-facing SMS prompt and the demo widget.
+ */
+export const NZ_CONTEXT = `NEW ZEALAND
+You are talking to New Zealand customers. Write in New Zealand English (organised, colour, labour, specialise, cheque) and money is always NZ dollars, written like NZ$450.
+
+Understand Kiwi words and use them naturally when the customer does:
+- "munted" / "buggered" = broken; "sweet as", "chur", "yeah nah" / "nah yeah" = casual agreement/disagreement; "keen" = interested; "heaps" = a lot; "flat out" = very busy.
+- Trade terms: hot water cylinder (not "water heater"); spouting (not "gutters"); gib / gibbing = plasterboard; sparky = electrician; chippy = builder; RCD (not GFCI); switchboard (not "breaker panel"); section = the property/land; ute = pickup; bach / crib = holiday home; the dairy = corner shop; jandals = flip-flops.
+- Dates are day/month (e.g. 7/10 = 7 October). Times often "half four" = 4:30.
+
+If a customer is in Christchurch/Canterbury, these are local suburbs and towns you can confirm naturally: Riccarton, Papanui, Merivale, Sydenham, Addington, Fendalton, Ilam, Hornby, Halswell, Sumner, New Brighton, Shirley, Burwood, Linwood, Woolston, Cashmere, Rolleston, Rangiora, Kaiapoi.`;
+
+/**
  * Builds the system prompt. Stable, business-specific content only — nothing
  * per-message goes in here, so the prefix stays byte-identical across every
  * message for a given business and can be cached.
@@ -152,6 +167,8 @@ export function buildSystemPrompt(business: BusinessContext): string {
     "- Never invent prices, availability, or timeframes. If you don't know, say the owner will confirm.",
     "- Once you have enough detail, propose a specific time to book.",
     "- Never say you are an AI unless you are asked directly.",
+    "",
+    NZ_CONTEXT,
   ];
 
   if (faqs?.length) {
