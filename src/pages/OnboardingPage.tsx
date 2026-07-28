@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   Check,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button, Input, Select, Textarea } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -97,6 +98,9 @@ export function OnboardingPage() {
   const [transferInstructions, setTransferInstructions] = useState('');
 
   const handleNext = async () => {
+    // Guard against a double-tap on the save step firing two writes.
+    if (loading) return;
+
     if (currentStep === 0 && selectedIndustry) {
       setServices(defaultServices[selectedIndustry] || []);
       setCurrentStep(1);
@@ -121,29 +125,36 @@ export function OnboardingPage() {
           ? { start: '08:00', end: '18:00', weekends: false }
           : { start: '07:00', end: '20:00', weekends: true };
 
+        // upsert on owner_id (which is now UNIQUE): if this owner already has a
+        // business, update it instead of creating a duplicate. Always INSERTing
+        // was what produced the duplicate rows behind the redirect loop.
         const { error } = await supabase
           .from('businesses')
-          .insert({
-            owner_id: user?.id,
-            name: businessName,
-            industry: selectedIndustry,
-            phone: businessPhone || null,
-            address: businessAddress || null,
-            city: businessCity || null,
-            state: businessState || null,
-            zip: businessZip || null,
-            website: businessWebsite || null,
-            settings: {
-              email: businessEmail || null,
-              serviceArea: serviceArea || null,
-              services,
-              businessHours,
-              businessDescription,
-              responseTone,
-              customInstructions,
-              transferInstructions,
+          .upsert(
+            {
+              owner_id: user?.id,
+              name: businessName,
+              industry: selectedIndustry,
+              phone: businessPhone || null,
+              address: businessAddress || null,
+              city: businessCity || null,
+              state: businessState || null,
+              zip: businessZip || null,
+              website: businessWebsite || null,
+              onboarding_complete: true,
+              settings: {
+                email: businessEmail || null,
+                serviceArea: serviceArea || null,
+                services,
+                businessHours,
+                businessDescription,
+                responseTone,
+                customInstructions,
+                transferInstructions,
+              },
             },
-          })
+            { onConflict: 'owner_id' }
+          )
           .select()
           .single();
 
@@ -153,6 +164,7 @@ export function OnboardingPage() {
         setCurrentStep(5);
       } catch (err) {
         console.error('Error creating business:', err);
+        toast.error("We couldn't save your details. Please try again.");
       } finally {
         setLoading(false);
       }

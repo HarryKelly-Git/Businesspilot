@@ -40,28 +40,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchBusiness = useCallback(async (userId: string) => {
+    // order + limit + maybeSingle, NOT .single(): .single() throws when a user
+    // has 0 or 2+ businesses, which set `business` to null and drove the
+    // onboarding redirect loop. This tolerates any row count and returns the
+    // newest business (or null) without erroring.
     const { data, error } = await supabase
       .from('businesses')
       .select('*')
       .eq('owner_id', userId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!error && data) {
       setBusiness(data);
 
-      // Fetch subscription
+      // maybeSingle here too: a new user has no subscription, and .single()
+      // would error on zero rows.
       const { data: subData } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('business_id', data.id)
         .eq('status', 'active')
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (subData) {
-        setSubscription(subData);
-      } else {
-        setSubscription(null);
-      }
+      setSubscription(subData ?? null);
     } else {
       setBusiness(null);
       setSubscription(null);
