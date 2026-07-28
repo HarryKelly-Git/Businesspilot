@@ -351,7 +351,12 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             </button>
           </div>
         )}
-        <div className="overflow-y-auto overscroll-contain p-6">{children}</div>
+        {/* min-h-0 is the load-bearing fix: a flex child defaults to
+            min-height:auto, which refuses to shrink below its content, so the
+            panel's max-h can't force it to scroll and tall content (e.g. the Add
+            Lead form) gets clipped past the bottom of the screen. min-h-0 lets it
+            shrink so overflow-y-auto actually scrolls. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6">{children}</div>
       </div>
     </div>,
     document.body

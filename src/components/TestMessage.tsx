@@ -114,15 +114,17 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Simulate an incoming SMS from a customer. This will create a lead and generate an AI response.
-                </p>
+              {/* The form is the flex body: a scrollable fields area + a pinned
+                  footer, so the action buttons are never pushed off-screen. */}
+              <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Simulate an incoming SMS from a customer. This will create a lead and generate an AI response.
+                  </p>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
                   <Input
                     label="Phone Number *"
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="021 123 4567"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     required
@@ -202,27 +204,29 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
                     </motion.div>
                   )}
 
-                  <div className="flex gap-3 pt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setIsOpen(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={!formData.phone || !formData.message || loading}
-                      loading={loading}
-                      className="flex-1"
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Test Message
-                    </Button>
-                  </div>
-                </form>
-              </div>
+                </div>
+
+                {/* Pinned footer — always visible, never clipped */}
+                <div className="flex shrink-0 gap-3 border-t border-border p-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsOpen(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={!formData.phone || !formData.message || loading}
+                    loading={loading}
+                    className="flex-1"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Test Message
+                  </Button>
+                </div>
+              </form>
             </motion.div>
           </>
         )}
