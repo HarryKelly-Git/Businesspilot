@@ -1,27 +1,51 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, ComponentType } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 
 import DashboardLayout from './layouts/DashboardLayout';
 
+/**
+ * lazy() that recovers from a failed chunk fetch. After a deploy, a browser
+ * holding a stale index.html requests old chunk hashes that no longer exist
+ * (404), and a plain lazy() would leave the page stuck on its skeleton forever.
+ * On the first such failure we reload once to pull the fresh index.html + chunks.
+ */
+function lazyWithReload<T extends ComponentType<unknown>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(() =>
+    factory().catch((err) => {
+      const KEY = 'bp-chunk-reloaded-at';
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      // Reload at most once per 10s to avoid a reload loop if it's a real error.
+      if (Date.now() - last > 10_000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {}); // hold render until reload
+      }
+      throw err;
+    })
+  );
+}
+
 // Lazy-loaded pages for code splitting — keeps the initial bundle small.
-const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
-const AuthPage = lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage })));
-const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const LeadsPage = lazy(() => import('./pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
-const MissedCallsPage = lazy(() => import('./pages/MissedCallsPage').then(m => ({ default: m.MissedCallsPage })));
-const PricingPage = lazy(() => import('./pages/PricingPage'));
-const CheckoutSuccessPage = lazy(() => import('./pages/CheckoutSuccessPage'));
-const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })));
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const ReportsPage = lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
-const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
-const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
-const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
-const TermsPage = lazy(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
-const SecurityPage = lazy(() => import('./pages/SecurityPage').then(m => ({ default: m.SecurityPage })));
-const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const HomePage = lazyWithReload(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+const AuthPage = lazyWithReload(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage })));
+const OnboardingPage = lazyWithReload(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
+const DashboardPage = lazyWithReload(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const LeadsPage = lazyWithReload(() => import('./pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
+const MissedCallsPage = lazyWithReload(() => import('./pages/MissedCallsPage').then(m => ({ default: m.MissedCallsPage })));
+const PricingPage = lazyWithReload(() => import('./pages/PricingPage'));
+const CheckoutSuccessPage = lazyWithReload(() => import('./pages/CheckoutSuccessPage'));
+const AppointmentsPage = lazyWithReload(() => import('./pages/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })));
+const SettingsPage = lazyWithReload(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ReportsPage = lazyWithReload(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const IntegrationsPage = lazyWithReload(() => import('./pages/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
+const AboutPage = lazyWithReload(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
+const PrivacyPage = lazyWithReload(() => import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazyWithReload(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const SecurityPage = lazyWithReload(() => import('./pages/SecurityPage').then(m => ({ default: m.SecurityPage })));
+const ContactPage = lazyWithReload(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 
 // Loading skeleton component
 const PageSkeleton = () => (

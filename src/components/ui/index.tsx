@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -312,7 +313,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     xl: 'max-w-xl',
   };
 
-  return (
+  // Portal to <body> so `position: fixed` is relative to the viewport, not to a
+  // transformed ancestor. Modals opened from inside framer-motion wrappers (the
+  // dashboard/leads pages) were being positioned relative to that transformed
+  // container and rendered off-screen — the "goes out of view" bug.
+  return createPortal(
     // `p-4` on the scroll container (not margin on the panel) keeps the panel inside the
     // viewport at 375px instead of overflowing by the margin width.
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
@@ -348,7 +353,8 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         )}
         <div className="overflow-y-auto overscroll-contain p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

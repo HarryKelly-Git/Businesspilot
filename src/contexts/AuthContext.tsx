@@ -86,8 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id);
-          await fetchBusiness(currentSession.user.id);
+          // Parallel, not sequential — halves the wait before the app renders.
+          await Promise.all([
+            fetchProfile(currentSession.user.id),
+            fetchBusiness(currentSession.user.id),
+          ]);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);

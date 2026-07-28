@@ -1,0 +1,29 @@
+# Netlify build + caching. Without this, cache behaviour is undefined and a
+# browser holding a stale index.html after a deploy requests old hashed chunk
+# names that no longer exist (404) — the page then hangs on its loading
+# skeleton forever ("some pages don't even load").
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Hashed assets (index-AbC123.js) are content-addressed: the name changes when
+# the content does, so they can be cached forever.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html must NEVER be cached, so every visit picks up the latest deploy
+# and references the current chunk hashes.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# SPA fallback: every route serves index.html so client-side routing works on
+# deep links / refresh. (Mirrors public/_redirects.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

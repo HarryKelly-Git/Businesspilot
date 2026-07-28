@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { MessageSquare, Send, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button, Input, Textarea } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { sendIncomingMessage } from '../lib/api';
@@ -81,6 +82,7 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
         Test Incoming Message
       </Button>
 
+      {createPortal(
       <AnimatePresence>
         {isOpen && (
           <>
@@ -224,7 +226,9 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </>
   );
 }
