@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import SubscriptionBadge from '../components/SubscriptionBadge';
 import { LogoMark } from '../components/Logo';
+import { OwnerAssistant } from '../components/dashboard/OwnerAssistant';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -143,6 +144,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+
+      {/* Owner's AI assistant — available on every dashboard page */}
+      <OwnerAssistant />
     </div>
   );
 }

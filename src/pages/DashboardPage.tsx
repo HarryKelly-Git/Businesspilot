@@ -274,7 +274,7 @@ export function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.18 }}
       >
-        <AICoachCard hasRealData={realLeads.length > 0} insight={null} />
+        <AICoachCard hasRealData={realLeads.length > 0} />
       </motion.div>
 
       {/* Live AI activity */}

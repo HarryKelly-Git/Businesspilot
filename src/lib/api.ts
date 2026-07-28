@@ -66,3 +66,20 @@ export async function markLeadBooked(
     status,
   })) as MarkBookedResponse;
 }
+
+export async function askAssistant(
+  message: string,
+  history: Array<{ role: string; content: string }>
+): Promise<{ response?: string; error?: string }> {
+  return (await authorizedFetch('owner-assistant', { message, history })) as {
+    response?: string;
+    error?: string;
+  };
+}
+
+export async function getDailySummary(): Promise<{ summary: string | null; error?: string }> {
+  return (await authorizedFetch('daily-summary', {})) as {
+    summary: string | null;
+    error?: string;
+  };
+}
