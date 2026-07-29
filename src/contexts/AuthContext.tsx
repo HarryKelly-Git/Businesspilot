@@ -28,11 +28,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
+    // maybeSingle, not single: a missing profile row shouldn't surface an error.
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (!error && data) {
       setProfile(data);
@@ -73,61 +74,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Loads profile + business. Deliberately called from OUTSIDE the
+  // onAuthStateChange callback (see below) — running Supabase DB queries inside
+  // that callback deadlocks against the auth lock the callback holds.
+  const loadUserData = useCallback(
+    async (userId: string) => {
+      try {
+        await Promise.all([fetchProfile(userId), fetchBusiness(userId)]);
+      } catch (error) {
+        console.error('[auth] failed to load user data:', error);
+      }
+    },
+    [fetchProfile, fetchBusiness]
+  );
+
   useEffect(() => {
     let mounted = true;
+    let resolved = false;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          // Parallel, not sequential — halves the wait before the app renders.
-          await Promise.all([
-            fetchProfile(currentSession.user.id),
-            fetchBusiness(currentSession.user.id),
-          ]);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+    const finishLoading = () => {
+      if (mounted && !resolved) {
+        resolved = true;
+        setLoading(false);
       }
     };
 
-    initializeAuth();
+    // FAILSAFE: the app must never hang on the boot spinner. If auth hasn't
+    // resolved within 8s (e.g. the Supabase auth lock stalls while recovering a
+    // stored session), stop loading anyway and let the route guards send the
+    // user to /auth. This is the guarantee that the infinite-spinner symptom
+    // cannot recur, whatever the underlying cause.
+    const failsafe = setTimeout(() => {
+      if (!resolved) console.warn('[auth] init timed out after 8s — proceeding unauthenticated');
+      finishLoading();
+    }, 8000);
 
+    // Single source of truth. Subscribing emits INITIAL_SESSION with the stored
+    // session (or null), then fires again on SIGNED_IN / SIGNED_OUT / refresh.
+    // The callback stays SYNCHRONOUS — no awaited Supabase calls inside it, or
+    // it deadlocks against the auth lock it runs under.
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      (event, newSession) => {
         if (!mounted) return;
+        console.log('[auth] event:', event, '· session:', !!newSession);
 
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          await fetchProfile(newSession.user.id);
-          await fetchBusiness(newSession.user.id);
-        } else if (event === 'SIGNED_OUT') {
+        if (newSession?.user) {
+          // Defer the DB fetches out of this callback (and out of the auth lock)
+          // with a 0ms timer, then resolve loading once the data is in.
+          const uid = newSession.user.id;
+          setTimeout(() => {
+            if (!mounted) return;
+            loadUserData(uid).finally(finishLoading);
+          }, 0);
+        } else {
           setProfile(null);
           setBusiness(null);
           setSubscription(null);
+          finishLoading();
         }
-
-        setLoading(false);
       }
     );
 
     return () => {
       mounted = false;
+      clearTimeout(failsafe);
       authSub.unsubscribe();
     };
-  }, [fetchProfile, fetchBusiness]);
+  }, [loadUserData]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
@@ -159,12 +175,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Clear local state first so the UI reflects sign-out immediately, even if
+    // the network call is slow or the auth lock stalls.
     setUser(null);
     setSession(null);
     setProfile(null);
     setBusiness(null);
     setSubscription(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('[auth] signOut error:', error);
+    }
   };
 
   const refreshProfile = async () => {
