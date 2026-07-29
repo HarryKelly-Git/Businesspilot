@@ -93,6 +93,13 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
               className="fixed inset-0 z-40 bg-black/50"
               onClick={() => setIsOpen(false)}
             />
+            {/* Positioning wrapper — NOT animated. framer-motion writes an inline
+                transform on the panel below (from scale/y), which overrides any
+                Tailwind translate-based centering. That was the desktop bug: the
+                modal's corner sat at screen-centre and its footer fell off tall
+                viewports. Centering via this flex parent is immune to the panel's
+                transform, at every viewport height. */}
+            <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -100,8 +107,7 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              // Flex column + scrollable body so the Send button stays reachable on a 375px screen.
-              className="fixed inset-x-4 top-4 bottom-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-h-[calc(100dvh-2rem)] z-50 flex flex-col max-w-md mx-auto bg-card rounded-xl shadow-xl border border-border overflow-hidden"
+              className="pointer-events-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl"
             >
               <div className="flex shrink-0 items-center justify-between p-4 border-b border-border">
                 <h2 className="text-lg font-semibold">Test Incoming Message</h2>
@@ -228,6 +234,7 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
                 </div>
               </form>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>,
