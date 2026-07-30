@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { adminClient, corsHeaders } from "../_shared/auth.ts";
 import { generateReply } from "../_shared/ai.ts";
+import { alertOwnerOfEmergency, detectEmergency, raiseUrgency } from "../_shared/emergency.ts";
 
 const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
 // Set this when the public URL Twilio posts to differs from what the edge
@@ -125,23 +126,35 @@ Deno.serve(async (req: Request) => {
 
     const businessId = business.id;
 
+    // Classify urgency from the raw message (instant, no AI call). Drives the
+    // stored lead.urgency and whether we page the owner.
+    const emergency = detectEmergency(body, business.industry);
+
     // Find or create the lead
     const { data: existingLead } = await supabase
       .from("leads")
-      .select("id, status")
+      .select("id, status, urgency, name")
       .eq("business_id", businessId)
       .eq("phone", from)
       .maybeSingle();
 
+    const priorUrgency = existingLead?.urgency ?? "normal";
+    // Raise to the detected level, never downgrade — this correctly applies a
+    // normal→high bump too, not only normal→urgent.
+    const nextUrgency = raiseUrgency(priorUrgency, emergency.urgency);
+
     let leadId: string;
+    let leadName = from;
 
     if (existingLead) {
       leadId = existingLead.id;
+      leadName = (existingLead.name as string) || from;
       await supabase
         .from("leads")
         .update({
           last_message: body,
           status: existingLead.status === "new" ? "contacted" : existingLead.status,
+          urgency: nextUrgency,
           last_contacted_at: new Date().toISOString(),
         })
         .eq("id", leadId);
@@ -154,6 +167,7 @@ Deno.serve(async (req: Request) => {
           phone: from,
           source: "sms",
           status: "new",
+          urgency: emergency.urgency,
           last_message: body,
         })
         .select("id")
@@ -165,6 +179,10 @@ Deno.serve(async (req: Request) => {
       }
       leadId = newLead.id;
     }
+
+    // Page the owner only on the transition into an emergency, so a customer
+    // firing off several panicked texts doesn't spam the owner's phone.
+    const shouldAlertOwner = emergency.isEmergency && priorUrgency !== "urgent";
 
     await supabase.from("incoming_messages").insert({
       business_id: businessId,
@@ -186,15 +204,29 @@ Deno.serve(async (req: Request) => {
     const history: Array<{ role: string; content: string }> = conversation?.messages || [];
     const userMessage = { role: "user", content: body, timestamp: new Date().toISOString() };
 
-    const aiResponse = await generateReply(
-      {
-        name: business.name,
-        industry: business.industry,
-        settings: business.settings as Record<string, unknown> | null,
-      },
-      body,
-      history
-    );
+    // Generate the customer reply and page the owner concurrently — the alert is
+    // independent of the reply, so it must not add latency to the customer's text.
+    const [aiResponse] = await Promise.all([
+      generateReply(
+        {
+          name: business.name,
+          industry: business.industry,
+          settings: business.settings as Record<string, unknown> | null,
+        },
+        body,
+        history
+      ),
+      shouldAlertOwner
+        ? alertOwnerOfEmergency(supabase, {
+            businessId,
+            settings: business.settings as Record<string, unknown> | null,
+            leadName,
+            leadPhone: from,
+            message: body,
+            reason: emergency.reason,
+          })
+        : Promise.resolve(null),
+    ]);
 
     // If the model is unavailable, still acknowledge so the customer isn't left
     // hanging — but don't fake a qualifying conversation.

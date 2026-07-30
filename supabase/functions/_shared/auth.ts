@@ -76,6 +76,38 @@ export async function ownsBusiness(
   return !error && !!data;
 }
 
+/**
+ * Resolves the phone number to send owner alerts (e.g. emergency notifications)
+ * to. Prefers an explicit `settings.alertPhone` override, then falls back to the
+ * owner's profile phone. Returns the raw string (caller normalises to E.164), or
+ * null when neither is set.
+ */
+export async function getOwnerAlertPhone(
+  admin: SupabaseClient,
+  businessId: string,
+  settings: Record<string, unknown> | null
+): Promise<string | null> {
+  const override = settings?.alertPhone;
+  if (typeof override === "string" && override.trim()) return override.trim();
+
+  const { data: biz } = await admin
+    .from("businesses")
+    .select("owner_id")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  if (!biz?.owner_id) return null;
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("phone")
+    .eq("id", biz.owner_id)
+    .maybeSingle();
+
+  const phone = profile?.phone;
+  return typeof phone === "string" && phone.trim() ? phone.trim() : null;
+}
+
 /** True when `leadId` belongs to a business owned by `userId`. */
 export async function ownsLead(
   admin: SupabaseClient,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { MessageSquare, Send, X, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Button, Input, Textarea } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { sendIncomingMessage } from '../lib/api';
@@ -18,6 +18,10 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
     success: boolean;
     message?: string;
     lead_id?: string;
+    emergency?: boolean;
+    emergency_reason?: string | null;
+    owner_alerted?: boolean;
+    owner_alert_status?: string;
   } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -45,6 +49,10 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
           success: true,
           message: response.message,
           lead_id: response.lead_id,
+          emergency: response.emergency,
+          emergency_reason: response.emergency_reason,
+          owner_alerted: response.owner_alerted,
+          owner_alert_status: response.owner_alert_status,
         });
         setFormData({ phone: '', name: '', message: '' });
         onMessageSent?.();
@@ -205,6 +213,45 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
                               {result.message}
                             </p>
                           )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {result?.success && result.emergency && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800"
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                            🚨 Emergency detected
+                          </p>
+                          {result.emergency_reason && (
+                            <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+                              {result.emergency_reason}
+                            </p>
+                          )}
+                          <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+                            {(
+                              {
+                                sent: 'Owner alerted by SMS.',
+                                already_alerted: 'Owner already alerted for this lead.',
+                                'no-phone':
+                                  'Owner not alerted — add an alert number in your profile so we can text you.',
+                                'not-configured':
+                                  "Owner not alerted — SMS isn't switched on for your account yet.",
+                                'send-failed':
+                                  'Emergency detected, but the alert SMS failed to send. Please try again.',
+                              } as Record<string, string>
+                            )[result.owner_alert_status ?? ''] ??
+                              (result.owner_alerted
+                                ? 'Owner alerted by SMS.'
+                                : 'Owner not alerted — add an alert number in your profile so we can text you (check SMS is switched on).')}
+                          </p>
                         </div>
                       </div>
                     </motion.div>

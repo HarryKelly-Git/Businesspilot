@@ -7,6 +7,7 @@ import {
   json,
 } from "../_shared/auth.ts";
 import { generateReply } from "../_shared/ai.ts";
+import { alertOwnerOfEmergency, detectEmergency, raiseUrgency } from "../_shared/emergency.ts";
 
 interface IncomingMessage {
   phone: string;
@@ -53,21 +54,35 @@ Deno.serve(async (req: Request) => {
       .eq("id", businessId)
       .single();
 
+    // Classify urgency from the raw message (instant, no AI call). Drives the
+    // stored lead.urgency and whether we page the owner.
+    const emergency = detectEmergency(message, business?.industry ?? null);
+
     // Find or create the lead
     const { data: existingLead } = await supabase
       .from("leads")
-      .select("id, name")
+      .select("id, name, urgency")
       .eq("phone", phone)
       .eq("business_id", businessId)
       .maybeSingle();
 
+    const priorUrgency = existingLead?.urgency ?? "normal";
+    // Raise to the detected level, never downgrade — includes normal→high.
+    const nextUrgency = raiseUrgency(priorUrgency, emergency.urgency);
+
     let leadId: string;
+    let leadName = name || phone;
 
     if (existingLead) {
       leadId = existingLead.id;
+      leadName = (existingLead.name as string) || name || phone;
       await supabase
         .from("leads")
-        .update({ last_message: message, last_contacted_at: new Date().toISOString() })
+        .update({
+          last_message: message,
+          urgency: nextUrgency,
+          last_contacted_at: new Date().toISOString(),
+        })
         .eq("id", leadId);
     } else {
       const { data: newLead, error: leadError } = await supabase
@@ -79,7 +94,7 @@ Deno.serve(async (req: Request) => {
           last_message: message,
           source,
           status: "new",
-          urgency: "normal",
+          urgency: emergency.urgency,
         })
         .select()
         .single();
@@ -91,6 +106,9 @@ Deno.serve(async (req: Request) => {
 
       leadId = newLead.id;
     }
+
+    // Page the owner only on the transition into an emergency.
+    const shouldAlertOwner = emergency.isEmergency && priorUrgency !== "urgent";
 
     await supabase.from("incoming_messages").insert({
       business_id: businessId,
@@ -128,15 +146,28 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const aiResponse = await generateReply(
-      {
-        name: business?.name ?? null,
-        industry: business?.industry ?? null,
-        settings: (business?.settings as Record<string, unknown>) ?? null,
-      },
-      message,
-      history
-    );
+    // Generate the reply and page the owner concurrently — independent work.
+    const [aiResponse, alertResult] = await Promise.all([
+      generateReply(
+        {
+          name: business?.name ?? null,
+          industry: business?.industry ?? null,
+          settings: (business?.settings as Record<string, unknown>) ?? null,
+        },
+        message,
+        history
+      ),
+      shouldAlertOwner
+        ? alertOwnerOfEmergency(supabase, {
+            businessId,
+            settings: (business?.settings as Record<string, unknown>) ?? null,
+            leadName,
+            leadPhone: phone,
+            message,
+            reason: emergency.reason,
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!aiResponse) {
       // The lead is captured either way — that's the part that protects revenue.
@@ -181,7 +212,27 @@ Deno.serve(async (req: Request) => {
 
     await supabase.from("leads").update({ status: "contacted" }).eq("id", leadId);
 
-    return json({ success: true, lead_id: leadId, message: aiResponse });
+    // Distinguish "deduped — owner already alerted for this lead" from "attempted
+    // but failed / not configured", so the test modal never tells a correctly set-up
+    // owner they're misconfigured just because they re-tested the same number.
+    const ownerAlertStatus = !emergency.isEmergency
+      ? "not_emergency"
+      : !shouldAlertOwner
+        ? "already_alerted"
+        : alertResult?.alerted
+          ? "sent"
+          : alertResult?.skipped ?? "send-failed";
+
+    return json({
+      success: true,
+      lead_id: leadId,
+      message: aiResponse,
+      urgency: emergency.urgency,
+      emergency: emergency.isEmergency,
+      emergency_reason: emergency.reason,
+      owner_alerted: alertResult?.alerted ?? false,
+      owner_alert_status: ownerAlertStatus,
+    });
   } catch (error) {
     console.error("Error processing incoming message:", error);
     return json({ error: "Internal server error" }, 500);

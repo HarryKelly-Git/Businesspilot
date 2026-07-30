@@ -7,6 +7,26 @@ interface IncomingMessageResponse {
   lead_id: string;
   message: string;
   error?: string;
+  /** Urgency the message was classified as (emergency detection). */
+  urgency?: 'low' | 'normal' | 'high' | 'urgent';
+  /** True when the message was classified as a genuine emergency. */
+  emergency?: boolean;
+  /** Short label for why it was flagged, e.g. "Possible gas leak". */
+  emergency_reason?: string | null;
+  /** True when an owner-alert SMS was sent for this message. */
+  owner_alerted?: boolean;
+  /**
+   * Finer-grained alert outcome, so the UI can tell "already alerted for this
+   * lead" apart from a real misconfiguration.
+   */
+  owner_alert_status?:
+    | 'sent'
+    | 'already_alerted'
+    | 'no-phone'
+    | 'not-configured'
+    | 'send-failed'
+    | 'loops-to-self'
+    | 'not_emergency';
 }
 
 interface MarkBookedResponse {
