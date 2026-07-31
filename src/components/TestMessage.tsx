@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Send, X, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
@@ -23,6 +23,16 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
     owner_alerted?: boolean;
     owner_alert_status?: string;
   } | null>(null);
+
+  // The result (incl. the emergency banner) renders at the bottom of the
+  // scrollable body, so on a tall form it can land below the fold. Pull it into
+  // view whenever a result appears so the outcome is never silently missed.
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (result) {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [result]);
 
   const [formData, setFormData] = useState({
     phone: '',
@@ -257,6 +267,8 @@ export function TestMessage({ onMessageSent }: TestMessageProps) {
                     </motion.div>
                   )}
 
+                  {/* Scroll anchor — the result/banner is auto-scrolled into view. */}
+                  <div ref={resultRef} />
                 </div>
 
                 {/* Pinned footer — always visible, never clipped */}

@@ -60,6 +60,7 @@ export function SettingsPage() {
   // Business settings
   const [businessName, setBusinessName] = useState('');
   const [businessPhone, setBusinessPhone] = useState('');
+  const [alertPhone, setAlertPhone] = useState('');
   const [businessEmail, setBusinessEmail] = useState('');
   const [businessWebsite, setBusinessWebsite] = useState('');
   const [businessAddress, setBusinessAddress] = useState('');
@@ -101,6 +102,7 @@ export function SettingsPage() {
       const settings = business.settings as Record<string, unknown> | null;
       if (settings) {
         setBusinessEmail((settings.email as string) || '');
+        setAlertPhone((settings.alertPhone as string) || '');
         setServiceArea((settings.serviceArea as string) || '');
         setServices((settings.services as string[]) || []);
         setBusinessDescription((settings.businessDescription as string) || '');
@@ -127,6 +129,7 @@ export function SettingsPage() {
           ...business?.settings,
           email: businessEmail || null,
           serviceArea: serviceArea || null,
+          alertPhone: alertPhone || null,
         },
       });
       if (result.error) {
@@ -343,6 +346,19 @@ export function SettingsPage() {
                   value={businessPhone}
                   onChange={(e) => setBusinessPhone(e.target.value)}
                 />
+                <div>
+                  <Input
+                    label="Emergency alert mobile"
+                    type="tel"
+                    placeholder="021 123 4567"
+                    value={alertPhone}
+                    onChange={(e) => setAlertPhone(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Where we text you when an emergency enquiry comes in (e.g. no power, burst pipe).
+                    Use your personal mobile — not your business line.
+                  </p>
+                </div>
                 <Input
                   label="Email"
                   type="email"
