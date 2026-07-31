@@ -71,6 +71,7 @@ export function SettingsPage() {
 
   // Notification / mode preferences
   const [emailDailySummary, setEmailDailySummary] = useState(true);
+  const [approvalMode, setApprovalMode] = useState(false);
 
   // Services
   const [services, setServices] = useState<string[]>([]);
@@ -109,6 +110,8 @@ export function SettingsPage() {
         setServiceArea((settings.serviceArea as string) || '');
         // Default ON (opt-out), for existing accounts too.
         setEmailDailySummary(settings.emailDailySummary !== false);
+        // Default OFF = current auto-book behaviour.
+        setApprovalMode(settings.approvalMode === true);
         setServices((settings.services as string[]) || []);
         setBusinessDescription((settings.businessDescription as string) || '');
         setResponseTone((settings.responseTone as string) || 'friendly');
@@ -136,6 +139,7 @@ export function SettingsPage() {
           serviceArea: serviceArea || null,
           alertPhone: alertPhone || null,
           emailDailySummary,
+          approvalMode,
         },
       });
       if (result.error) {
@@ -376,6 +380,21 @@ export function SettingsPage() {
                     type="checkbox"
                     checked={emailDailySummary}
                     onChange={(e) => setEmailDailySummary(e.target.checked)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                </label>
+                <label className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 cursor-pointer">
+                  <span className="text-sm">
+                    <span className="font-medium">Booking approval mode</span>
+                    <span className="block text-xs text-muted-foreground">
+                      When on, the AI proposes booking times for you to approve before confirming with the
+                      customer. When off, it books automatically. (Approval workflow coming soon.)
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={approvalMode}
+                    onChange={(e) => setApprovalMode(e.target.checked)}
                     className="h-4 w-4 shrink-0"
                   />
                 </label>
