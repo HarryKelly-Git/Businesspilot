@@ -1,23 +1,40 @@
 /**
- * Shared outbound SMS via Twilio's REST API. Extracted from send-test-sms so the
- * same sender powers test messages, emergency owner-alerts, and (later) booking
- * confirmations — one place that knows how to talk to Twilio and normalise NZ
- * numbers.
+ * Shared OUTBOUND SMS.
+ *
+ * Sends via TNZ (smsapi.nz) — a New Zealand CPaaS with no trial/verified-number
+ * restriction. This replaces Twilio's REST API for OUTBOUND messages: Twilio's
+ * trial account could only text manually-verified numbers (error 21608), so it
+ * could never reach real customers or the owner's alert phone in production.
+ *
+ * Scope note (important): this file is OUTBOUND only. Inbound customer SMS still
+ * arrives on the Twilio number via the twilio-webhook, and the customer
+ * auto-reply is still returned to Twilio as TwiML from that same webhook — a
+ * separate path that does NOT call sendSms. What sendSms powers today: owner
+ * emergency-alerts (_shared/emergency.ts) and the dashboard test SMS
+ * (send-test-sms). The public surface below (sendSms / toE164 / smsConfigured /
+ * isPlatformNumber) is unchanged, so no caller needed to change.
  */
 
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+// Outbound provider: TNZ. The AuthToken is generated in the TNZ dashboard.
+const TNZ_AUTH_TOKEN = Deno.env.get("TNZ_AUTH_TOKEN");
+// Optional sender id / number. TNZ uses the account default sender when unset.
+const TNZ_SENDER = Deno.env.get("TNZ_SENDER");
+const TNZ_SEND_SMS_URL = "https://api.tnz.co.nz/api/v2.04/send/sms";
+
+// Kept only for the loop guard below — inbound customer SMS is still on this
+// Twilio number even though outbound now goes via TNZ.
 const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
 
-/** True when the Twilio credentials needed to send are all present. */
+/** True when the credentials needed to send (TNZ) are present. */
 export function smsConfigured(): boolean {
-  return Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER);
+  return Boolean(TNZ_AUTH_TOKEN);
 }
 
 /**
- * True when `e164` is this platform's own inbound Twilio number. Guards against
- * texting the line customers text in on — that message would loop straight back
- * through twilio-webhook and bill an SMS on every cycle.
+ * True when `e164` is our own inbound Twilio line. Guards against sending an
+ * alert to the number customers text in on: Twilio would post it to
+ * twilio-webhook, which would detect "emergency" in the alert body and loop,
+ * billing a message every cycle. (Inbound is still Twilio; only outbound moved.)
  */
 export function isPlatformNumber(e164: string): boolean {
   return TWILIO_PHONE_NUMBER ? toE164(TWILIO_PHONE_NUMBER) === e164 : false;
@@ -36,9 +53,8 @@ export function isPlatformNumber(e164: string): boolean {
  * A non-NZ "+cc…" number keeps its own country code (e.g. "+61…").
  *
  * The rule that matters: an NZ national trunk "0" must NEVER be left sitting
- * after the +64 country code. The old code did exactly that for "+64 0…" input,
- * producing e.g. +640288517… — an invalid number that Twilio rejected as
- * unverified, which is why owner-alert SMS never arrived.
+ * after the +64 country code. (Left tested + unchanged — the previous provider
+ * migration did not touch this.)
  */
 export function toE164(raw: string): string {
   const trimmed = (raw || "").trim();
@@ -69,52 +85,75 @@ export function toE164(raw: string): string {
 
 export interface SmsResult {
   success: boolean;
-  /** Twilio message SID on success. */
+  /** Provider message id on success (TNZ MessageID). */
   sid?: string;
-  /** Twilio error code (e.g. 21211 invalid number, 21608 unverified in trial). */
+  /** Failure code — the provider HTTP status (e.g. 400 bad request, 401 auth). */
   code?: number;
   /** Raw error message for logging — not necessarily user-facing. */
   error?: string;
 }
 
 /**
- * Sends one SMS. Caller is responsible for E.164-normalising `to` (use toE164).
- * Never throws — returns a structured result so callers (which are often in the
- * hot path of a customer reply) can decide what to do without a try/catch.
+ * Sends one SMS via TNZ. Caller is responsible for E.164-normalising `to`
+ * (use toE164). Never throws — returns a structured result so callers (often in
+ * the hot path of a customer reply) can decide what to do without a try/catch.
  */
 export async function sendSms(to: string, body: string): Promise<SmsResult> {
-  if (!smsConfigured()) {
-    return { success: false, error: "Twilio is not configured" };
+  if (!TNZ_AUTH_TOKEN) {
+    // No `code` set → callers treat this as "not configured" rather than a
+    // provider send failure.
+    return { success: false, error: "TNZ is not configured (TNZ_AUTH_TOKEN missing)" };
   }
 
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-  const credentials = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-
-  const form = new URLSearchParams();
-  form.append("To", to);
-  form.append("From", TWILIO_PHONE_NUMBER!);
-  form.append("Body", body);
+  const payload = {
+    MessageData: {
+      Message: body,
+      Destinations: [{ Recipient: to }],
+      // "Live" actually delivers; "Test" validates without sending. Set it
+      // explicitly so a wrong default can never silently swallow a real send.
+      SendMode: "Live",
+      ...(TNZ_SENDER ? { From: TNZ_SENDER } : {}),
+    },
+  };
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(TNZ_SEND_SMS_URL, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${credentials}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        // TNZ v2.04: the dashboard-issued AuthToken is the RAW Authorization
+        // header value (no "Bearer"/"Basic" prefix).
+        Authorization: TNZ_AUTH_TOKEN,
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
-      body: form,
+      body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Twilio send error:", data);
-      return { success: false, code: data.code, error: data.message || "Twilio error" };
+    const raw = await response.text();
+    let data: Record<string, unknown> | null = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      // TNZ returned a non-JSON body; `raw` is kept for the error path below.
     }
 
-    return { success: true, sid: data.sid };
+    if (!response.ok) {
+      const em = (data?.ErrorMessage ?? null) as unknown;
+      const message = Array.isArray(em)
+        ? em.join("; ")
+        : typeof em === "string"
+          ? em
+          : raw || `HTTP ${response.status}`;
+      // Log status + body so a wrong auth-header format (401) or bad field name
+      // is obvious on the very first real test, not a silent failure.
+      console.error(`TNZ send error (HTTP ${response.status}):`, message);
+      return { success: false, code: response.status, error: message };
+    }
+
+    const messageId = (data?.MessageID ?? data?.Result) as unknown;
+    return { success: true, sid: messageId != null ? String(messageId) : undefined };
   } catch (error) {
-    console.error("Twilio send threw:", error);
+    console.error("TNZ send threw:", error);
     return { success: false, error: String(error) };
   }
 }
