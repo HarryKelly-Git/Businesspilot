@@ -103,3 +103,49 @@ export async function getDailySummary(): Promise<{ summary: string | null; error
     error?: string;
   };
 }
+
+// ---- Ghost Lead Resurrector ------------------------------------------------
+
+export interface RawResurrectionRow {
+  name?: string;
+  phone?: string;
+  job_description?: string;
+  quote_amount?: string;
+  quote_date?: string;
+}
+
+export interface ResurrectionImportResult {
+  success?: boolean;
+  campaign_id?: string;
+  imported?: number;
+  suppressed?: number;
+  skipped?: Array<{ name: string; phone: string; reason: string }>;
+  error?: string;
+}
+
+export async function importResurrectionLeads(payload: {
+  name: string;
+  angle: string;
+  custom_message?: string;
+  recipients: RawResurrectionRow[];
+  confirmed: boolean;
+}): Promise<ResurrectionImportResult> {
+  return (await authorizedFetch('resurrection-import', payload)) as ResurrectionImportResult;
+}
+
+export interface ResurrectionPreviewMessage {
+  id: string;
+  name: string | null;
+  phone: string;
+  message: string | null;
+}
+
+export async function generateResurrectionMessages(
+  campaignId: string,
+  limit?: number
+): Promise<{ messages?: ResurrectionPreviewMessage[]; error?: string }> {
+  return (await authorizedFetch('resurrection-generate', {
+    campaign_id: campaignId,
+    limit,
+  })) as { messages?: ResurrectionPreviewMessage[]; error?: string };
+}

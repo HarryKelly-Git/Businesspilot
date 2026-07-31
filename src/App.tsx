@@ -34,6 +34,7 @@ const AuthPage = lazyWithReload(() => import('./pages/AuthPage').then(m => ({ de
 const OnboardingPage = lazyWithReload(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
 const DashboardPage = lazyWithReload(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const LeadsPage = lazyWithReload(() => import('./pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
+const GhostLeadsPage = lazyWithReload(() => import('./pages/GhostLeadsPage').then(m => ({ default: m.GhostLeadsPage })));
 const MissedCallsPage = lazyWithReload(() => import('./pages/MissedCallsPage').then(m => ({ default: m.MissedCallsPage })));
 const PricingPage = lazyWithReload(() => import('./pages/PricingPage'));
 const CheckoutSuccessPage = lazyWithReload(() => import('./pages/CheckoutSuccessPage'));
@@ -108,6 +109,14 @@ function App() {
                 element={
                   <DashboardLayout>
                     <LeadsPage />
+                  </DashboardLayout>
+                }
+              />
+              <Route
+                path="/resurrector"
+                element={
+                  <DashboardLayout>
+                    <GhostLeadsPage />
                   </DashboardLayout>
                 }
               />
