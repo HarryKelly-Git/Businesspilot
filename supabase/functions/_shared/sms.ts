@@ -24,20 +24,47 @@ export function isPlatformNumber(e164: string): boolean {
 }
 
 /**
- * Normalises to E.164, defaulting to New Zealand.
- * "021 123 4567" -> "+64211234567"; a leading "+" is trusted and only stripped
- * of non-digits.
+ * Normalises a phone number to E.164, defaulting to New Zealand.
+ *
+ * Handles the ways Kiwis actually write a mobile — all of these normalise to the
+ * same E.164:
+ *   "021 123 4567"        -> "+64211234567"
+ *   "+64 21 123 4567"     -> "+64211234567"
+ *   "+64 021 123 4567"    -> "+64211234567"   (trunk 0 after +64 stripped)
+ *   "64 21 123 4567"      -> "+64211234567"
+ *   "0064 21 123 4567"    -> "+64211234567"
+ * A non-NZ "+cc…" number keeps its own country code (e.g. "+61…").
+ *
+ * The rule that matters: an NZ national trunk "0" must NEVER be left sitting
+ * after the +64 country code. The old code did exactly that for "+64 0…" input,
+ * producing e.g. +640288517… — an invalid number that Twilio rejected as
+ * unverified, which is why owner-alert SMS never arrived.
  */
 export function toE164(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.startsWith("+")) {
-    return "+" + trimmed.slice(1).replace(/\D/g, "");
+  const trimmed = (raw || "").trim();
+  const hadPlus = trimmed.startsWith("+");
+  let digits = trimmed.replace(/\D/g, "");
+
+  // "00" is the international access prefix — treat it like a leading "+".
+  let international = hadPlus;
+  if (digits.startsWith("00")) {
+    international = true;
+    digits = digits.slice(2);
   }
 
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits.startsWith("64")) return "+" + digits;
-  if (digits.startsWith("0")) return "+64" + digits.slice(1);
-  return "+64" + digits;
+  // A country-coded NZ number, however it arrived: strip any trunk 0 left after
+  // the "64" so we never emit +640…
+  if (digits.startsWith("64")) {
+    return "+64" + digits.slice(2).replace(/^0+/, "");
+  }
+
+  // An explicit "+cc" that isn't NZ keeps its own country code untouched.
+  if (international) {
+    return "+" + digits;
+  }
+
+  // Bare national NZ number: drop the trunk 0(s) and prepend the country code.
+  return "+64" + digits.replace(/^0+/, "");
 }
 
 export interface SmsResult {
