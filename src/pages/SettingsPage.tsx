@@ -69,6 +69,9 @@ export function SettingsPage() {
   const [businessZip, setBusinessZip] = useState('');
   const [serviceArea, setServiceArea] = useState('');
 
+  // Notification / mode preferences
+  const [emailDailySummary, setEmailDailySummary] = useState(true);
+
   // Services
   const [services, setServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
@@ -104,6 +107,8 @@ export function SettingsPage() {
         setBusinessEmail((settings.email as string) || '');
         setAlertPhone((settings.alertPhone as string) || '');
         setServiceArea((settings.serviceArea as string) || '');
+        // Default ON (opt-out), for existing accounts too.
+        setEmailDailySummary(settings.emailDailySummary !== false);
         setServices((settings.services as string[]) || []);
         setBusinessDescription((settings.businessDescription as string) || '');
         setResponseTone((settings.responseTone as string) || 'friendly');
@@ -130,6 +135,7 @@ export function SettingsPage() {
           email: businessEmail || null,
           serviceArea: serviceArea || null,
           alertPhone: alertPhone || null,
+          emailDailySummary,
         },
       });
       if (result.error) {
@@ -359,6 +365,20 @@ export function SettingsPage() {
                     Use your personal mobile — not your business line.
                   </p>
                 </div>
+                <label className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 cursor-pointer">
+                  <span className="text-sm">
+                    <span className="font-medium">Email me my daily summary</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Your AI Coach briefing, sent to your account email each morning.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={emailDailySummary}
+                    onChange={(e) => setEmailDailySummary(e.target.checked)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                </label>
                 <Input
                   label="Email"
                   type="email"
