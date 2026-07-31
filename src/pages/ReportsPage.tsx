@@ -73,7 +73,8 @@ export function ReportsPage() {
   }, [leads]);
 
   const recoveryRate = useMemo(() => {
-    if (aggregatedMetrics.missed_calls === 0) return 100;
+    // No missed calls means nothing to recover — show 0, not a misleading 100%.
+    if (aggregatedMetrics.missed_calls === 0) return 0;
     return Math.round((aggregatedMetrics.calls_recovered / aggregatedMetrics.missed_calls) * 100);
   }, [aggregatedMetrics]);
 
@@ -81,6 +82,16 @@ export function ReportsPage() {
     if (aggregatedMetrics.leads_received === 0) return 0;
     return Math.round((aggregatedMetrics.leads_converted / aggregatedMetrics.leads_received) * 100);
   }, [aggregatedMetrics]);
+
+  // Real revenue trend: last 7 days of metrics vs the 7 before. null when there
+  // isn't a prior period to compare against (so we never show a made-up delta).
+  const revenueTrend = useMemo(() => {
+    const sum = (arr: typeof metrics) => arr.reduce((s, m) => s + Number(m.revenue_recovered), 0);
+    const recent = sum(metrics.slice(-7));
+    const prior = sum(metrics.slice(-14, -7));
+    if (prior === 0) return null;
+    return Math.round(((recent - prior) / prior) * 100);
+  }, [metrics]);
 
   const handleExportPDF = () => {
     const reportContent = `
@@ -117,8 +128,9 @@ export function ReportsPage() {
     {
       title: 'Revenue Recovered',
       value: formatCurrency(aggregatedMetrics.revenue_recovered),
-      change: '+12%',
-      positive: true,
+      // Real 7-day-over-7-day trend; a neutral label when there's no prior period.
+      change: revenueTrend === null ? 'this period' : `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}%`,
+      positive: (revenueTrend ?? 0) >= 0,
       icon: DollarSign,
       color: 'text-green-500',
       bg: 'bg-green-100 dark:bg-green-900/30',
@@ -368,13 +380,13 @@ export function ReportsPage() {
               {aggregatedMetrics.calls_recovered < aggregatedMetrics.missed_calls * 0.5 && (
                 <li className="flex items-start gap-2">
                   <Phone className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
-                  <span>Consider enabling auto-recovery for missed calls to improve conversion by up to 40%.</span>
+                  <span>You're recovering fewer than half your missed calls — enabling auto-recovery would win back more of them.</span>
                 </li>
               )}
               {conversionRate < 30 && (
                 <li className="flex items-start gap-2">
                   <Clock className="w-4 h-4 mt-0.5 shrink-0 text-blue-500" />
-                  <span>Response time impacts conversion. Leads contacted within 5 minutes convert 400% more often.</span>
+                  <span>Response speed matters — the faster you reply, the more of these leads you'll win. Aim to respond within a few minutes.</span>
                 </li>
               )}
               {leads.filter(l => !l.last_contacted_at).length > 3 && (
