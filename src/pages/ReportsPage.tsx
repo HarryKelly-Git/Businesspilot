@@ -131,6 +131,7 @@ export function ReportsPage() {
       // Real 7-day-over-7-day trend; a neutral label when there's no prior period.
       change: revenueTrend === null ? 'this period' : `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}%`,
       positive: (revenueTrend ?? 0) >= 0,
+      neutral: revenueTrend === null,
       icon: DollarSign,
       color: 'text-green-500',
       bg: 'bg-green-100 dark:bg-green-900/30',
@@ -140,6 +141,7 @@ export function ReportsPage() {
       value: aggregatedMetrics.leads_converted,
       change: `${conversionRate}% rate`,
       positive: conversionRate > 20,
+      neutral: false,
       icon: TrendingUp,
       color: 'text-blue-500',
       bg: 'bg-blue-100 dark:bg-blue-900/30',
@@ -149,15 +151,19 @@ export function ReportsPage() {
       value: aggregatedMetrics.calls_recovered,
       change: `${recoveryRate}% rate`,
       positive: recoveryRate > 70,
+      neutral: false,
       icon: Phone,
       color: 'text-orange-500',
       bg: 'bg-orange-100 dark:bg-orange-900/30',
     },
     {
+      // "AI handled" is a descriptive label, not a period-over-period change, so
+      // this card shows a neutral indicator — no up/down arrow to imply a trend.
       title: 'Messages Sent',
       value: aggregatedMetrics.messages_sent,
       change: 'AI handled',
       positive: true,
+      neutral: true,
       icon: MessageSquare,
       color: 'text-purple-500',
       bg: 'bg-purple-100 dark:bg-purple-900/30',
@@ -206,13 +212,18 @@ export function ReportsPage() {
                     <Icon className={`w-6 h-6 ${metric.color}`} />
                   </div>
                   <div className={`flex items-center gap-1 text-sm ${
-                    metric.positive ? 'text-green-500' : 'text-red-500'
+                    metric.neutral
+                      ? 'text-muted-foreground'
+                      : metric.positive
+                      ? 'text-green-500'
+                      : 'text-red-500'
                   }`}>
-                    {metric.positive ? (
-                      <ArrowUp className="w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="w-3 h-3" />
-                    )}
+                    {!metric.neutral &&
+                      (metric.positive ? (
+                        <ArrowUp className="w-3 h-3" />
+                      ) : (
+                        <ArrowDown className="w-3 h-3" />
+                      ))}
                     <span>{metric.change}</span>
                   </div>
                 </div>
