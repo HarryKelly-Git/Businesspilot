@@ -139,9 +139,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <button
             onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
             className="text-gray-400 hover:text-white transition-colors p-1"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 

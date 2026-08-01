@@ -506,7 +506,7 @@ function ManualEntry({
           {rows.map((r, i) => (
             <li key={i} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
               <span className="truncate">{r.name || '(no name)'} · {r.phone}</span>
-              <button onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => onRemove(i)} aria-label={`Remove ${r.name || r.phone || 'lead'}`} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" aria-hidden="true" /></button>
             </li>
           ))}
         </ul>

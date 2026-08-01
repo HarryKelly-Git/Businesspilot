@@ -502,8 +502,8 @@ export function SettingsPage() {
                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
                       >
                         {service}
-                        <button onClick={() => removeService(service)} className="ml-1">
-                          <X className="w-3 h-3" />
+                        <button onClick={() => removeService(service)} aria-label={`Remove ${service}`} className="ml-1">
+                          <X className="w-3 h-3" aria-hidden="true" />
                         </button>
                       </span>
                     ))}
@@ -578,8 +578,8 @@ export function SettingsPage() {
                             <p className="font-medium text-sm">{faq.question}</p>
                             <p className="text-sm text-muted-foreground mt-1">{faq.answer}</p>
                           </div>
-                          <button onClick={() => removeFaq(index)}>
-                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                          <button onClick={() => removeFaq(index)} aria-label="Remove question">
+                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" aria-hidden="true" />
                           </button>
                         </div>
                       </div>

@@ -153,9 +153,10 @@ export function SalesAIChat() {
         animate={{ scale: 1 }}
         transition={{ delay: 2, type: 'spring' }}
         onClick={() => setIsOpen(true)}
+        aria-label="Open sales chat"
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center ${isOpen ? 'hidden' : 'flex'}`}
       >
-        <MessageCircle className="w-6 h-6" />
+        <MessageCircle className="w-6 h-6" aria-hidden="true" />
       </motion.button>
 
       {/* Chat Panel */}
@@ -182,9 +183,10 @@ export function SalesAIChat() {
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
+                  aria-label="Close chat"
                   className="w-8 h-8 rounded-full hover:bg-primary-foreground/10 flex items-center justify-center transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -280,9 +282,10 @@ export function SalesAIChat() {
                 <button
                   type="submit"
                   disabled={!input.trim() || isTyping}
+                  aria-label="Send message"
                   className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4" aria-hidden="true" />
                 </button>
               </form>
             </div>

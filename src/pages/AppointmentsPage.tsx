@@ -219,11 +219,13 @@ export function AppointmentsPage() {
 
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
-            <div className="text-2xl font-bold text-green-600">{stats.upcoming}</div>
-            <div className="text-sm text-muted-foreground">Upcoming</div>
+            <div className="min-w-0">
+              <div className="text-2xl font-bold text-green-600">{stats.upcoming}</div>
+              <div className="text-sm text-muted-foreground">Upcoming</div>
+            </div>
           </div>
         </Card>
 
@@ -249,11 +251,13 @@ export function AppointmentsPage() {
 
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5 text-orange-600" />
             </div>
-            <div className="text-2xl font-bold text-orange-600">{stats.today}</div>
-            <div className="text-sm text-muted-foreground">Today</div>
+            <div className="min-w-0">
+              <div className="text-2xl font-bold text-orange-600">{stats.today}</div>
+              <div className="text-sm text-muted-foreground">Today</div>
+            </div>
           </div>
         </Card>
       </div>
@@ -294,9 +298,10 @@ export function AppointmentsPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                aria-label="Previous month"
                 onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
               </Button>
               <Button
                 variant="ghost"
@@ -308,9 +313,10 @@ export function AppointmentsPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                aria-label="Next month"
                 onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </Button>
             </div>
           </div>
