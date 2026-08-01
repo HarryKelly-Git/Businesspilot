@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -12,6 +12,7 @@ import {
   DollarSign,
   X,
   Zap,
+  Star,
 } from 'lucide-react';
 import { Card, Badge, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,6 +65,35 @@ export function DashboardPage() {
   const { appointments: realAppointments, loading: appointmentsLoading } = useAppointments();
   const { missedCalls, loading: callsLoading } = useMissedCalls();
   const [dismissing, setDismissing] = useState(false);
+
+  // Reputation Loop counts — real data from review_requests (0 until jobs are
+  // completed with the loop switched on). Never sample data.
+  const [reviewStats, setReviewStats] = useState<{
+    prepared: number;
+    positive: number;
+    protected: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!business?.id) return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('review_requests')
+        .select('sentiment')
+        .eq('business_id', business.id);
+      if (!active) return;
+      const rows = data ?? [];
+      setReviewStats({
+        prepared: rows.length,
+        positive: rows.filter((r) => r.sentiment === 'positive').length,
+        protected: rows.filter((r) => r.sentiment === 'negative' || r.sentiment === 'mixed').length,
+      });
+    })();
+    return () => {
+      active = false;
+    };
+  }, [business?.id]);
 
   const greeting = getGreeting();
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
@@ -551,6 +581,47 @@ export function DashboardPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Reputation Loop — real counts from review_requests, never sample data. */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 }}
+      >
+        <Card className="p-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Star className="w-5 h-5 text-indigo-400" aria-hidden="true" />
+              Reviews protected
+            </h2>
+            <Link to="/reviews" className="text-sm text-primary hover:underline shrink-0">
+              View all
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <div className="text-2xl font-bold break-words">{reviewStats?.prepared ?? 0}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Requests prepared</div>
+            </div>
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <div className="text-2xl font-bold break-words text-green-500">
+                {reviewStats?.positive ?? 0}
+              </div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Positive replies</div>
+            </div>
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <div className="text-2xl font-bold break-words text-indigo-400">
+                {reviewStats?.protected ?? 0}
+              </div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Reviews protected</div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Completed jobs become review requests automatically. Unhappy customers are caught
+            privately before they post. Sending starts once TNZ is connected.
+          </p>
+        </Card>
+      </motion.div>
     </div>
   );
 }

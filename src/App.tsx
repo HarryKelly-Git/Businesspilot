@@ -35,6 +35,7 @@ const OnboardingPage = lazyWithReload(() => import('./pages/OnboardingPage').the
 const DashboardPage = lazyWithReload(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const LeadsPage = lazyWithReload(() => import('./pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
 const GhostLeadsPage = lazyWithReload(() => import('./pages/GhostLeadsPage').then(m => ({ default: m.GhostLeadsPage })));
+const ReviewsPage = lazyWithReload(() => import('./pages/ReviewsPage').then(m => ({ default: m.ReviewsPage })));
 const MissedCallsPage = lazyWithReload(() => import('./pages/MissedCallsPage').then(m => ({ default: m.MissedCallsPage })));
 const PricingPage = lazyWithReload(() => import('./pages/PricingPage'));
 const CheckoutSuccessPage = lazyWithReload(() => import('./pages/CheckoutSuccessPage'));
@@ -117,6 +118,14 @@ function App() {
                 element={
                   <DashboardLayout>
                     <GhostLeadsPage />
+                  </DashboardLayout>
+                }
+              />
+              <Route
+                path="/reviews"
+                element={
+                  <DashboardLayout>
+                    <ReviewsPage />
                   </DashboardLayout>
                 }
               />

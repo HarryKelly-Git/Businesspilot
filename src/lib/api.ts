@@ -149,3 +149,28 @@ export async function generateResurrectionMessages(
     limit,
   })) as { messages?: ResurrectionPreviewMessage[]; error?: string };
 }
+
+// ---- Reputation Loop (review requests) -------------------------------------
+
+export interface ReviewClassifyResult {
+  sentiment?: 'positive' | 'negative' | 'mixed';
+  followup_message?: string;
+  review_link_prepared?: boolean;
+  owner_alert_prepared?: boolean;
+  owner_alert_message?: string | null;
+  error?: string;
+}
+
+/**
+ * Classify a customer's reply to a review request with Claude Haiku and prepare
+ * the branched follow-up. Nothing is sent — sending stays disabled pending TNZ.
+ */
+export async function classifyReviewReply(
+  reviewRequestId: string,
+  replyText: string
+): Promise<ReviewClassifyResult> {
+  return (await authorizedFetch('review-classify', {
+    review_request_id: reviewRequestId,
+    reply_text: replyText,
+  })) as ReviewClassifyResult;
+}

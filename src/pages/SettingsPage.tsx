@@ -13,6 +13,7 @@ import {
   X,
   Trash2,
   AlertTriangle,
+  Star,
 } from 'lucide-react';
 import { Card, Button, Input, Select, Textarea, Badge, Spinner, Modal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,6 +29,7 @@ const tabs = [
   { id: 'business', label: 'Business', icon: Building },
   { id: 'services', label: 'Services', icon: SettingsIcon },
   { id: 'ai', label: 'Response Settings', icon: MessageSquare },
+  { id: 'reviews', label: 'Reviews', icon: Star },
   { id: 'account', label: 'Account', icon: User },
   { id: 'billing', label: 'Billing', icon: CreditCard },
 ];
@@ -73,6 +75,11 @@ export function SettingsPage() {
   const [emailDailySummary, setEmailDailySummary] = useState(true);
   const [approvalMode, setApprovalMode] = useState(false);
 
+  // Reputation Loop (reviews)
+  const [googleReviewLink, setGoogleReviewLink] = useState('');
+  const [autoRequestReviews, setAutoRequestReviews] = useState(false);
+  const [reviewDelayHours, setReviewDelayHours] = useState('2');
+
   // Services
   const [services, setServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
@@ -112,6 +119,12 @@ export function SettingsPage() {
         setEmailDailySummary(settings.emailDailySummary !== false);
         // Default OFF = current auto-book behaviour.
         setApprovalMode(settings.approvalMode === true);
+        // Reputation Loop. Toggle defaults OFF; it can't be on without a link.
+        setGoogleReviewLink((settings.googleReviewLink as string) || '');
+        setAutoRequestReviews(settings.autoRequestReviews === true);
+        setReviewDelayHours(
+          settings.reviewRequestDelayHours != null ? String(settings.reviewRequestDelayHours) : '2'
+        );
         setServices((settings.services as string[]) || []);
         setBusinessDescription((settings.businessDescription as string) || '');
         setResponseTone((settings.responseTone as string) || 'friendly');
@@ -170,6 +183,32 @@ export function SettingsPage() {
       }
     } catch (err) {
       toast.error('Failed to save services');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveReviews = async () => {
+    setSaving(true);
+    try {
+      const link = googleReviewLink.trim();
+      const delay = Math.max(0, Math.round(Number(reviewDelayHours)) || 2);
+      const result = await updateBusiness({
+        settings: {
+          ...business?.settings,
+          googleReviewLink: link || null,
+          // Enforce the rule on save too, not just in the UI: no link => off.
+          autoRequestReviews: link ? autoRequestReviews : false,
+          reviewRequestDelayHours: delay,
+        },
+      });
+      if (result.error) {
+        toast.error('Failed to save review settings');
+      } else {
+        toast.success('Review settings saved');
+      }
+    } catch (err) {
+      toast.error('Failed to save review settings');
     } finally {
       setSaving(false);
     }
@@ -568,6 +607,83 @@ export function SettingsPage() {
                   <Button onClick={handleSaveAI} loading={saving}>
                     <Save className="w-4 h-4 mr-2" />
                     Save Settings
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Reputation Loop (reviews) */}
+          {activeTab === 'reviews' && (
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-1">Reputation Loop</h2>
+              <p className="text-sm text-muted-foreground mb-6 max-w-lg">
+                After a job is marked complete, automatically ask the customer how it went. Happy
+                customers get a one-tap Google review link; unhappy ones are caught privately so you
+                can put it right before they post publicly.
+              </p>
+              <div className="space-y-4 max-w-lg">
+                <div>
+                  <Input
+                    label="Google review link"
+                    placeholder="https://g.page/r/…/review"
+                    value={googleReviewLink}
+                    onChange={(e) => setGoogleReviewLink(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    From your Google Business Profile → “Ask for reviews”. Only sent to customers who
+                    reply positively.
+                  </p>
+                </div>
+
+                <label
+                  className={`flex items-center justify-between gap-4 rounded-lg border border-border p-3 ${
+                    googleReviewLink.trim() ? 'cursor-pointer' : 'opacity-60'
+                  }`}
+                >
+                  <span className="text-sm">
+                    <span className="font-medium">Auto-request reviews after job completion</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {googleReviewLink.trim()
+                        ? 'Turns the loop on for completed appointments.'
+                        : 'Add your review link above to enable this.'}
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={autoRequestReviews && !!googleReviewLink.trim()}
+                    disabled={!googleReviewLink.trim()}
+                    onChange={(e) => setAutoRequestReviews(e.target.checked)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                </label>
+
+                <div>
+                  <Input
+                    label="Delay before asking (hours)"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={reviewDelayHours}
+                    onChange={(e) => setReviewDelayHours(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    How long to wait after a job is completed before asking. Default 2 hours.
+                  </p>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 p-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    Sending is disabled until your SMS provider (TNZ) is connected. Requests are
+                    prepared and tracked now, and will start sending automatically once it’s live.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Button onClick={handleSaveReviews} loading={saving}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Review Settings
                   </Button>
                 </div>
               </div>

@@ -12,6 +12,7 @@ import {
   BarChart3,
   Plug,
   Ghost,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SubscriptionBadge from '../components/SubscriptionBadge';
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/leads', icon: Users, label: 'Leads' },
   { to: '/resurrector', icon: Ghost, label: 'Ghost Leads' },
+  { to: '/reviews', icon: Star, label: 'Reviews' },
   { to: '/appointments', icon: Calendar, label: 'Appointments' },
   { to: '/missed-calls', icon: PhoneMissed, label: 'Missed Calls' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },

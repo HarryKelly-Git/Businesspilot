@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { Card, Button, Input, Badge, Modal, Textarea, Spinner } from '../components/ui';
 import { useAppointments } from '../hooks/useData';
+import { useAuth } from '../contexts/AuthContext';
+import { scheduleReviewRequestOnCompletion } from '../lib/reviews';
 import { formatDate, formatTime } from '../lib/utils';
 import type { Appointment } from '../types';
 
@@ -35,6 +37,7 @@ const statusStyles = {
 
 export function AppointmentsPage() {
   const { appointments, loading, createAppointment, updateAppointment } = useAppointments();
+  const { business } = useAuth();
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
@@ -184,8 +187,16 @@ export function AppointmentsPage() {
     handleCloseModal();
   };
 
-  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
-    await updateAppointment(appointmentId, { status: newStatus as Appointment['status'] });
+  const handleStatusChange = async (appointment: Appointment, newStatus: string) => {
+    const wasCompleted = appointment.status === 'completed';
+    await updateAppointment(appointment.id, { status: newStatus as Appointment['status'] });
+    // Reputation Loop: on the transition INTO 'completed', schedule a review
+    // request. Fire-and-forget and self-guarding — it does nothing unless the
+    // business has switched the loop on and saved a review link, and it never
+    // blocks or breaks the status change the user just made.
+    if (business && newStatus === 'completed' && !wasCompleted) {
+      void scheduleReviewRequestOnCompletion(business, appointment);
+    }
   };
 
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -401,7 +412,7 @@ export function AppointmentsPage() {
                                 value={appointment.status}
                                 onChange={(e) => {
                                   e.stopPropagation();
-                                  handleStatusChange(appointment.id, e.target.value);
+                                  handleStatusChange(appointment, e.target.value);
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 className={`text-xs font-medium px-2 py-1.5 rounded-full border-none cursor-pointer ${
