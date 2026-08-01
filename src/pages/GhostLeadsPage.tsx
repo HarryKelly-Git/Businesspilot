@@ -117,7 +117,7 @@ export function GhostLeadsPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-2">
         <Ghost className="w-7 h-7 text-indigo-400 shrink-0" />
-        <h1 className="text-2xl font-bold">Ghost Lead Resurrector</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Ghost Lead Resurrector</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
         Reactivate old quotes and dead leads you already have. Import them, and we'll write a
@@ -207,9 +207,12 @@ function Overview({
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {statCards.map((s) => (
-          <Card key={s.label} className={`p-4 ${s.highlight ? 'border-indigo-500/40' : ''}`}>
+          <Card
+            key={s.label}
+            className={`p-4 ${s.highlight ? 'border-indigo-500/40 col-span-2 md:col-span-1' : ''}`}
+          >
             <p className="text-xs text-muted-foreground">{s.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${s.highlight ? 'text-indigo-400' : ''}`}>{s.value}</p>
+            <p className={`text-2xl font-bold mt-1 break-words ${s.highlight ? 'text-indigo-400' : ''}`}>{s.value}</p>
           </Card>
         ))}
       </div>
@@ -451,7 +454,7 @@ function ImportFlow({ onBack, onImported }: { onBack: () => void; onImported: (i
         </label>
       </Card>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           onClick={doImport}
           loading={importing}
@@ -617,7 +620,7 @@ function CampaignBuilder({
       </Card>
 
       {/* Send — deliberately disabled until the SMS provider is live. */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <span title="SMS sending will be enabled once TNZ is connected" className="inline-block">
           <Button disabled className="gap-2 cursor-not-allowed">
             <Send className="w-4 h-4" /> Send campaign
