@@ -93,6 +93,74 @@ export function detectEmergency(message: string, industry: string | null): Emerg
   return { isEmergency: false, urgency: "normal", reason: null };
 }
 
+// ---------------------------------------------------------------------------
+// Frustrated-customer detection.
+//
+// Runs alongside (not instead of) the emergency/urgency classifier above, and
+// like it stays keyword-based on purpose: deterministic, free, and verifiable,
+// with the same "don't cry wolf" discipline — soft words never trigger, only
+// CLEAR signals do. It flags explicit dissatisfaction, a stated intent to walk
+// away, or a genuinely repeated unanswered follow-up — never a merely short or
+// terse message. When flagged, the caller PREPARES an owner alert; the actual
+// send stays disabled pending TNZ (same pattern as the Ghost Lead Resurrector).
+// ---------------------------------------------------------------------------
+
+export interface FrustrationResult {
+  frustrated: boolean;
+  /** Short label for why, e.g. "Explicit dissatisfaction". Null when not flagged. */
+  reason: string | null;
+}
+
+// High-precision dissatisfaction / churn signals. Ordered specific -> general.
+const FRUSTRATION_RULES: Rule[] = [
+  {
+    label: "At risk of leaving",
+    pattern:
+      /\b(going elsewhere|go elsewhere|look(?:ing)? elsewhere|take my business elsewhere|taking my (?:business|money) elsewhere|find (?:someone|somebody) else|find another|won'?t be (?:using|back)|not coming back|never again|use (?:a )?(?:different|another) (?:company|firm|tradie|plumber|sparky|builder|business))\b/,
+  },
+  {
+    label: "Explicit dissatisfaction",
+    pattern:
+      /\b(not (?:really |at all )?happy|unhappy|unimpressed|unacceptable|not good enough|poor (?:service|job|work|workmanship)|terrible (?:service|job|experience)|appalling|disgraceful|disgusted|furious|fed up|had enough|sick of (?:waiting|this)|frustrated|frustrating|disappointed|disappointing|let down|waste of (?:my )?time|wasting my time|this is a joke|unprofessional|(?:been|so) rude|shoddy)\b/,
+  },
+];
+
+// Repeated unanswered follow-up. Only counts as frustration once the customer
+// has actually chased several times (gated by the caller's message count), so a
+// first, polite "any update?" never trips it.
+const CHASE_RULES: Rule[] = [
+  {
+    label: "Repeated follow-up",
+    pattern:
+      /\b(still (?:waiting|haven'?t heard)|haven'?t heard (?:back|anything)|any (?:update|news|word)|following up|chasing (?:this|it)|(?:second|third|2nd|3rd) time|is anyone (?:there|going)|anyone (?:there|home))\b/,
+  },
+];
+
+/**
+ * Flags a clearly frustrated / at-risk customer. `recentCustomerMessageCount`
+ * is how many messages this customer has sent in the thread so far (including
+ * the current one); the repeated-follow-up signal only fires at 3+, so a single
+ * chase is never treated as frustration.
+ */
+export function detectFrustration(
+  message: string,
+  opts?: { recentCustomerMessageCount?: number }
+): FrustrationResult {
+  const text = (message || "").toLowerCase();
+
+  for (const rule of FRUSTRATION_RULES) {
+    if (rule.pattern.test(text)) return { frustrated: true, reason: rule.label };
+  }
+
+  if ((opts?.recentCustomerMessageCount ?? 0) >= 3) {
+    for (const rule of CHASE_RULES) {
+      if (rule.pattern.test(text)) return { frustrated: true, reason: rule.label };
+    }
+  }
+
+  return { frustrated: false, reason: null };
+}
+
 const URGENCY_RANK: Record<Urgency, number> = { low: 0, normal: 1, high: 2, urgent: 3 };
 
 /**
@@ -123,6 +191,21 @@ export function buildOwnerAlert(
   const who = leadName && leadName !== leadPhone ? `${leadName} (${leadPhone})` : leadPhone;
   const why = reason ? ` [${reason}]` : "";
   return `🚨 EMERGENCY LEAD${why} — ${who}: "${excerpt(message)}". Call or text them now. — BusinessPilot`;
+}
+
+/**
+ * Builds the owner-facing "customer sounds frustrated" alert. Prepared only —
+ * the caller never sends it while SMS is parked (pending TNZ).
+ */
+export function buildFrustrationAlert(
+  leadName: string,
+  leadPhone: string,
+  message: string,
+  reason: string | null
+): string {
+  const who = leadName && leadName !== leadPhone ? `${leadName} (${leadPhone})` : leadPhone;
+  const why = reason ? ` [${reason}]` : "";
+  return `⚠️ Frustrated customer${why} — ${who}: "${excerpt(message)}". This customer sounds frustrated — worth a call soon. — BusinessPilot`;
 }
 
 export interface AlertResult {

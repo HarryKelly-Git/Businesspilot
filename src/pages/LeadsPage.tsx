@@ -9,6 +9,7 @@ import {
   Star,
   CheckCircle,
   MessageSquare,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card, Button, Input, Badge, Modal, Select, Textarea, Spinner } from '../components/ui';
 import { useLeads } from '../hooks/useData';
@@ -309,7 +310,17 @@ export function LeadsPage() {
                             </span>
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium truncate">{lead.name}</p>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <p className="font-medium truncate">{lead.name}</p>
+                              {lead.frustrated && (
+                                <span
+                                  title={lead.frustration_reason || 'Sounds frustrated'}
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                >
+                                  <AlertTriangle className="w-3 h-3" /> At risk
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               {lead.phone && (
                                 <span className="flex items-center gap-1">
@@ -483,7 +494,15 @@ export function LeadsPage() {
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">Urgency</p>
-                <Badge variant="warning">{selectedLead.urgency}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="warning">{selectedLead.urgency}</Badge>
+                  {selectedLead.frustrated && (
+                    <Badge variant="destructive">At risk</Badge>
+                  )}
+                </div>
+                {selectedLead.frustrated && selectedLead.frustration_reason && (
+                  <p className="mt-1 text-xs text-muted-foreground">{selectedLead.frustration_reason}</p>
+                )}
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">Source</p>

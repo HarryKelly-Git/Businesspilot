@@ -27,6 +27,10 @@ interface IncomingMessageResponse {
     | 'send-failed'
     | 'loops-to-self'
     | 'not_emergency';
+  /** True when the message showed clear frustration / churn risk. */
+  frustrated?: boolean;
+  /** Short label for why it was flagged, e.g. "Explicit dissatisfaction". */
+  frustration_reason?: string | null;
 }
 
 interface MarkBookedResponse {

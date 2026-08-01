@@ -7,7 +7,13 @@ import {
   json,
 } from "../_shared/auth.ts";
 import { generateReply } from "../_shared/ai.ts";
-import { alertOwnerOfEmergency, detectEmergency, raiseUrgency } from "../_shared/emergency.ts";
+import {
+  alertOwnerOfEmergency,
+  buildFrustrationAlert,
+  detectEmergency,
+  detectFrustration,
+  raiseUrgency,
+} from "../_shared/emergency.ts";
 
 interface IncomingMessage {
   phone: string;
@@ -146,6 +152,25 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Frustration signal — computed on the same inbound message, no extra AI
+    // call. (The emergency/urgency classifier above is deliberately keyword-
+    // based; frustration is detected the same way, for the same reliability and
+    // cost reasons.) On a flag we mark the lead for the Leads list and PREPARE —
+    // never send — an owner alert, consistent with the parked-SMS discipline.
+    const frustration = detectFrustration(message, {
+      recentCustomerMessageCount: history.filter((m) => m.role === "user").length + 1,
+    });
+    if (frustration.frustrated) {
+      // Only ever raise the flag; a later, calmer message never clears it.
+      await supabase
+        .from("leads")
+        .update({ frustrated: true, frustration_reason: frustration.reason })
+        .eq("id", leadId);
+      // Prepared, not sent — ready for the moment TNZ is live. No sendSms here.
+      const frustrationAlert = buildFrustrationAlert(leadName, phone, message, frustration.reason);
+      console.log(`[frustration] owner alert prepared (not sent — pending TNZ): ${frustrationAlert}`);
+    }
+
     // Generate the reply and page the owner concurrently — independent work.
     const [aiResponse, alertResult] = await Promise.all([
       generateReply(
@@ -232,6 +257,8 @@ Deno.serve(async (req: Request) => {
       emergency_reason: emergency.reason,
       owner_alerted: alertResult?.alerted ?? false,
       owner_alert_status: ownerAlertStatus,
+      frustrated: frustration.frustrated,
+      frustration_reason: frustration.reason,
     });
   } catch (error) {
     console.error("Error processing incoming message:", error);

@@ -65,6 +65,10 @@ export interface Lead {
   ai_probability: number | null;
   converted_at: string | null;
   last_message: string | null;
+  /** Flagged when an inbound message shows clear frustration / churn risk. */
+  frustrated?: boolean;
+  /** Short label for why, e.g. "Explicit dissatisfaction". */
+  frustration_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
