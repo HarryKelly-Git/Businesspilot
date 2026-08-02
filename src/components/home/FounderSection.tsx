@@ -5,20 +5,17 @@ import { Button } from '../ui';
 import { ContactModal } from './ContactModal';
 
 /**
- * ── SET YOUR REAL NAME HERE ──────────────────────────────────────────────
- * Put the actual founder's name and title in. The moment FOUNDER_NAME is a
- * non-empty string, the portrait and byline appear and the story is signed
- * personally — which is what makes this section convert.
+ * Deliberately UNSIGNED — a warm company/founder voice with no named person and
+ * no portrait. This is an intentional choice: we won't put an invented person on
+ * the site, and the owner has chosen not to attach a real identity either.
  *
- * While it's empty the same story runs in the company's voice with no byline,
- * which is honest and still persuasive. It is deliberately NOT filled with an
- * invented person: the trust this section buys depends on the buyer being able
- * to believe there's a real human behind the product.
- *
- * To add the portrait: save the image to  public/images/founder.jpg
- * (create the folder if needed), then set FOUNDER_PHOTO below.
+ * The component supports a signed variant (portrait + byline) if FOUNDER_NAME is
+ * ever set to a real, non-empty name — but leave it empty unless a real founder
+ * is genuinely being named, and add a real photo at public/images/founder.jpg
+ * before doing so. An empty name here renders the honest company-voice story
+ * below with no photo request, no broken image, and no fabricated persona.
  */
-const FOUNDER_NAME = 'James Miller';
+const FOUNDER_NAME = '';
 const FOUNDER_TITLE = 'Founder & CEO, BusinessPilot';
 const FOUNDER_PHOTO = '/images/founder.jpg';
 
