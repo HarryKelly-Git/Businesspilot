@@ -156,6 +156,17 @@ export function DashboardPage() {
   const hasLeads = leads.length > 0;
   const hasAppointments = appointments.length > 0;
 
+  // Genuinely empty: fully loaded, NOT showing sample data, and no real data of
+  // any kind. In this case we replace the wall of zeros (revenue + metric cards)
+  // with an honest, encouraging empty state rather than a discouraging $0 grid.
+  const allReady = leadsReady && appointmentsReady && callsReady;
+  const genuinelyEmpty =
+    allReady &&
+    !showSample &&
+    realLeads.length === 0 &&
+    realAppointments.length === 0 &&
+    missedCalls.length === 0;
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Sample-data banner */}
@@ -266,7 +277,32 @@ export function DashboardPage() {
         </motion.div>
       )}
 
+      {/* Honest empty state — set up but no real data yet, and not showing
+          sample data. Replaces the wall of zeros with an encouraging message. */}
+      {genuinelyEmpty && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="p-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <Sparkles className="h-7 w-7 text-primary" aria-hidden="true" />
+            </div>
+            <h2 className="text-xl font-semibold">No enquiries yet</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              You're all set up. The moment a customer texts or calls, BusinessPilot replies in
+              seconds — and it'll show up here within seconds too. Want to see how it responds?
+            </p>
+            <div className="mt-5 flex justify-center">
+              <TestMessage onMessageSent={() => {}} />
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Revenue recovered — lead with the number that means money. */}
+      {!genuinelyEmpty && (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -297,6 +333,7 @@ export function DashboardPage() {
           </p>
         </Card>
       </motion.div>
+      )}
 
       {/* AI Business Coach */}
       <motion.div
@@ -340,6 +377,7 @@ export function DashboardPage() {
       )}
 
       {/* Real Metrics */}
+      {!genuinelyEmpty && (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -403,6 +441,7 @@ export function DashboardPage() {
           <MetricCardSkeleton />
         )}
       </motion.div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Leads */}
@@ -583,6 +622,7 @@ export function DashboardPage() {
       )}
 
       {/* Reputation Loop — real counts from review_requests, never sample data. */}
+      {!genuinelyEmpty && (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -622,6 +662,7 @@ export function DashboardPage() {
           </p>
         </Card>
       </motion.div>
+      )}
     </div>
   );
 }

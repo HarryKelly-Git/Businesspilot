@@ -20,11 +20,18 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  Bot,
+  User,
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Input, Select, Textarea } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { getIndustryById } from '../lib/industries';
+import { questionsForIndustry } from '../lib/industryQuestions';
+import { getDemoReply } from '../lib/api';
 
 const industries = [
   { id: 'electrician', name: 'Electrician', icon: ZapOff },
@@ -42,7 +49,8 @@ const steps = [
   { id: 'services', title: 'Your Services', description: 'What services do you offer?' },
   { id: 'hours', title: 'Business Hours', description: 'When are you available?' },
   { id: 'ai', title: 'Response Settings', description: 'How should we handle enquiries?' },
-  { id: 'complete', title: 'Ready!', description: 'Start capturing leads' },
+  { id: 'seeit', title: 'See it in action', description: 'Watch your AI answer a real enquiry' },
+  { id: 'complete', title: "You're all set", description: 'BusinessPilot is now watching for enquiries' },
 ];
 
 const defaultServices: Record<string, string[]> = {
@@ -96,6 +104,32 @@ export function OnboardingPage() {
   const [responseTone, setResponseTone] = useState('friendly');
   const [customInstructions, setCustomInstructions] = useState('');
   const [transferInstructions, setTransferInstructions] = useState('');
+
+  // Step 6: See it in action (live AI demo)
+  const [demoReply, setDemoReply] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
+
+  // A realistic incoming enquiry for the selected trade. industries.ts has a
+  // per-trade example; fall back to a generic one (e.g. for "other").
+  const sampleMessage =
+    getIndustryById(selectedIndustry ?? '')?.exampleCustomer ??
+    'Hi, are you available this week? I need a quote for a job at my place.';
+
+  const runDemo = async () => {
+    if (demoLoading) return;
+    setDemoLoading(true);
+    setDemoError(null);
+    // A genuine live Claude Haiku call via the existing ai-demo function — not a
+    // scripted reply, and it creates no lead.
+    const res = await getDemoReply(sampleMessage);
+    setDemoLoading(false);
+    if (res.error || !res.response) {
+      setDemoError(res.error || "The AI couldn't reply just now. Please try again.");
+      return;
+    }
+    setDemoReply(res.response);
+  };
 
   const handleNext = async () => {
     // Guard against a double-tap on the save step firing two writes.
@@ -161,7 +195,7 @@ export function OnboardingPage() {
         if (error) throw error;
 
         await refreshBusiness();
-        setCurrentStep(5);
+        setCurrentStep(5); // -> "See it in action"
       } catch (err) {
         console.error('Error creating business:', err);
         toast.error("We couldn't save your details. Please try again.");
@@ -169,6 +203,8 @@ export function OnboardingPage() {
         setLoading(false);
       }
     } else if (currentStep === 5) {
+      setCurrentStep(6); // See it in action -> complete
+    } else if (currentStep === 6) {
       navigate('/dashboard');
     }
   };
@@ -253,6 +289,12 @@ export function OnboardingPage() {
               <h1 className="text-2xl font-bold mb-2">{step.title}</h1>
               <p className="text-muted-foreground">{step.description}</p>
             </div>
+
+            {currentStep === 0 && (
+              <p className="-mt-4 mb-8 text-center text-sm text-muted-foreground">
+                Welcome to BusinessPilot — let's get you set up. Takes about 3 minutes.
+              </p>
+            )}
 
             {/* Step 1: Industry */}
             {currentStep === 0 && (
@@ -496,20 +538,119 @@ export function OnboardingPage() {
                   onChange={(e) => setTransferInstructions(e.target.value)}
                   className="min-h-[80px]"
                 />
+
+                {/* The industry-specific qualifying questions this business's AI
+                    will actually use (read-only) — pulled from the same set the
+                    edge function uses. */}
+                <div className="rounded-lg border border-border p-4 text-left">
+                  <p className="text-sm font-medium">Questions your AI will ask</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Based on your trade — your AI works these into the conversation naturally, one at
+                    a time.
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {questionsForIndustry(selectedIndustry).map((q) => (
+                      <li key={q} className="flex items-start gap-2 text-sm">
+                        <MessageSquare
+                          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                        <span>{q}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
 
-            {/* Step 6: Complete */}
+            {/* Step 6: See it in action — a genuine live Claude Haiku reply. */}
             {currentStep === 5 && (
+              <div className="max-w-md mx-auto">
+                <p className="mb-4 text-center text-sm text-muted-foreground">
+                  Here's a message a customer might send you. Tap the button to see your AI reply —
+                  live, right now.
+                </p>
+
+                <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                  <div className="flex items-center gap-3 border-b border-border bg-muted/50 px-4 py-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
+                      <Bot className="h-5 w-5 text-primary-foreground" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Your AI</p>
+                      <p className="text-xs text-muted-foreground">Powered by Claude Haiku</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 p-4">
+                    {/* Incoming customer message */}
+                    <div className="flex items-start gap-2">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <User className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      </div>
+                      <div className="max-w-[80%] rounded-2xl rounded-tl-none bg-muted px-4 py-2.5">
+                        <p className="text-sm">{sampleMessage}</p>
+                      </div>
+                    </div>
+
+                    {demoLoading && (
+                      <div className="flex flex-row-reverse items-start gap-2">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary">
+                          <Bot className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
+                        </div>
+                        <div className="rounded-2xl rounded-tr-none bg-primary/10 px-4 py-2.5">
+                          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Your AI is
+                            replying…
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {demoReply && !demoLoading && (
+                      <div className="flex flex-row-reverse items-start gap-2">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary">
+                          <Bot className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
+                        </div>
+                        <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-primary px-4 py-2.5 text-primary-foreground">
+                          <p className="whitespace-pre-wrap text-sm">{demoReply}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {demoError && <p className="text-center text-sm text-destructive">{demoError}</p>}
+                  </div>
+                </div>
+
+                {!demoReply && !demoLoading && (
+                  <div className="mt-5 flex justify-center">
+                    <Button onClick={runDemo} className="gap-2">
+                      <Sparkles className="h-4 w-4" aria-hidden="true" />
+                      See how your AI would respond
+                    </Button>
+                  </div>
+                )}
+
+                {demoReply && !demoLoading && (
+                  <p className="mt-4 text-center text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">This is your AI, replying live.</span>{' '}
+                    This is the kind of instant, natural reply your customers get — day or night.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Step 7: Complete */}
+            {currentStep === 6 && (
               <div className="text-center">
                 <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Check className="w-10 h-10 text-success" />
                 </div>
 
-                <h2 className="text-xl font-bold mb-2">You're All Set!</h2>
+                <h2 className="text-xl font-bold mb-2">You're all set</h2>
                 <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                  Your lead capture system is ready. Start receiving enquiries and
-                  let the system handle the rest.
+                  BusinessPilot is now watching for enquiries. The moment a customer gets in touch,
+                  your AI replies in seconds — and you'll see it on your dashboard.
                 </p>
 
                 <div className="bg-muted rounded-lg p-6 max-w-md mx-auto mb-8 text-left">
@@ -563,8 +704,8 @@ export function OnboardingPage() {
             loading={loading}
             className="gap-2"
           >
-            {currentStep === 5 ? 'Go to Dashboard' : 'Continue'}
-            {currentStep < 5 && <ArrowRight className="w-4 h-4" />}
+            {currentStep === 6 ? 'Go to Dashboard' : 'Continue'}
+            {currentStep < 6 && <ArrowRight className="w-4 h-4" />}
           </Button>
         </div>
       </div>

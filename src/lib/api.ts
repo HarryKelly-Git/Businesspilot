@@ -108,6 +108,34 @@ export async function getDailySummary(): Promise<{ summary: string | null; error
   };
 }
 
+/**
+ * Live AI reply for the onboarding "see it work" demo. Reuses the existing
+ * `ai-demo` edge function (the same live Claude Haiku call powering the
+ * marketing demo widget) — a genuine model call, not a scripted response, and
+ * with NO side effects (it never creates a lead), so it doesn't pollute a brand
+ * new account's dashboard.
+ */
+export async function getDemoReply(
+  message: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<{ response?: string; error?: string }> {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-demo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ message, history }),
+    });
+    const data = await response.json();
+    if (!response.ok) return { error: data?.error || 'The demo is temporarily unavailable.' };
+    return { response: data.response };
+  } catch {
+    return { error: 'Could not reach the AI just now. Please try again.' };
+  }
+}
+
 // ---- Ghost Lead Resurrector ------------------------------------------------
 
 export interface RawResurrectionRow {
