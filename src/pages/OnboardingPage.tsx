@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap,
   ZapOff,
   Droplets,
   Hammer,
@@ -32,6 +31,7 @@ import { supabase } from '../lib/supabase';
 import { getIndustryById } from '../lib/industries';
 import { questionsForIndustry } from '../lib/industryQuestions';
 import { getDemoReply } from '../lib/api';
+import { Logo } from '../components/Logo';
 
 const industries = [
   { id: 'electrician', name: 'Electrician', icon: ZapOff },
@@ -269,11 +269,8 @@ export function OnboardingPage() {
         </div>
 
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-            <Zap className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <span className="text-2xl font-bold">BusinessPilot</span>
+        <div className="flex justify-center mb-8">
+          <Logo size="lg" />
         </div>
 
         {/* Content */}
