@@ -109,20 +109,30 @@ export async function sendSms(to: string, body: string): Promise<SmsResult> {
     MessageData: {
       Message: body,
       Destinations: [{ Recipient: to }],
-      // "Live" actually delivers; "Test" validates without sending. Set it
-      // explicitly so a wrong default can never silently swallow a real send.
+      // "Live" actually delivers; "Test" validates without sending. Not listed
+      // in the v2.04 field table but harmless if ignored, and it guards against
+      // a "Test" default silently swallowing a real send.
       SendMode: "Live",
-      ...(TNZ_SENDER ? { From: TNZ_SENDER } : {}),
+      // Per the v2.04 docs the sender field is "FromNumber" (was "From", which
+      // TNZ would ignore → sends fell back to the account default sender).
+      ...(TNZ_SENDER ? { FromNumber: TNZ_SENDER } : {}),
     },
   };
 
   try {
+    // TNZ v2.04 REST: the Authorization header is the dashboard-issued AuthToken
+    // (a JWT) prefixed with the "Basic " scheme — their docs show
+    // `Authorization: Basic eyJ...`. (An earlier version sent the raw token with
+    // no prefix, which 401s.) Accept the secret whether or not it was stored
+    // with a scheme already, so a "Basic …"/"Bearer …" value also works.
+    const authHeader = /^(Basic|Bearer)\s/i.test(TNZ_AUTH_TOKEN)
+      ? TNZ_AUTH_TOKEN
+      : `Basic ${TNZ_AUTH_TOKEN}`;
+
     const response = await fetch(TNZ_SEND_SMS_URL, {
       method: "POST",
       headers: {
-        // TNZ v2.04: the dashboard-issued AuthToken is the RAW Authorization
-        // header value (no "Bearer"/"Basic" prefix).
-        Authorization: TNZ_AUTH_TOKEN,
+        Authorization: authHeader,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
