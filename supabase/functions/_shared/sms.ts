@@ -113,9 +113,12 @@ export async function sendSms(to: string, body: string): Promise<SmsResult> {
       // in the v2.04 field table but harmless if ignored, and it guards against
       // a "Test" default silently swallowing a real send.
       SendMode: "Live",
-      // Per the v2.04 docs the sender field is "FromNumber" (was "From", which
-      // TNZ would ignore → sends fell back to the account default sender).
-      ...(TNZ_SENDER ? { FromNumber: TNZ_SENDER } : {}),
+      // Sender/origination number. TNZ's v2.04 docs say FromNumber is
+      // "Not for New Zealand" — NZ sends route from TNZ's compliant short code,
+      // and supplying a FromNumber for a +64 destination can be rejected at the
+      // carrier as "Rejected-Invalid Sender ID". So only apply TNZ_SENDER to
+      // NON-NZ destinations; NZ uses the account's short code automatically.
+      ...(TNZ_SENDER && !to.startsWith("+64") ? { FromNumber: TNZ_SENDER } : {}),
     },
   };
 
