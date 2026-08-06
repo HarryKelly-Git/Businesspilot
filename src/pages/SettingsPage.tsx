@@ -515,8 +515,8 @@ export function SettingsPage() {
                       onChange={(e) => setCustomService(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addService())}
                     />
-                    <Button onClick={addService} variant="outline">
-                      <Plus className="w-4 h-4" />
+                    <Button onClick={addService} variant="outline" aria-label="Add service">
+                      <Plus className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>

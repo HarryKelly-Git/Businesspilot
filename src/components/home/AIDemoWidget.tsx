@@ -262,8 +262,8 @@ export function AIDemoWidget() {
                     className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--accent))]/20 text-sm"
                     disabled={isLoading || isLocked}
                   />
-                  <Button type="submit" disabled={isLoading || !customQuery.trim() || isLocked}>
-                    <Send className="w-4 h-4" />
+                  <Button type="submit" aria-label="Send message" disabled={isLoading || !customQuery.trim() || isLocked}>
+                    <Send className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </form>
                 <p className="text-xs text-muted-foreground mt-2 text-center">
