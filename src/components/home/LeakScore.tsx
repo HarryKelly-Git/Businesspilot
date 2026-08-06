@@ -82,7 +82,7 @@ export function LeakScore() {
   };
 
   const handleShare = async () => {
-    const text = `I just checked my business with BusinessPilot's Leak Score calculator. My score: ${leakScore}/100 - that's an estimated $${monthlyLoss.toLocaleString()}/month in missed revenue! Check yours at businesspilot.ai`;
+    const text = `I just checked my business with BusinessPilot's Leak Score calculator. My score: ${leakScore}/100 - that's an estimated $${monthlyLoss.toLocaleString()}/month in missed revenue! Check yours at thebusinesspilot.com`;
 
     try {
       await navigator.clipboard.writeText(text);

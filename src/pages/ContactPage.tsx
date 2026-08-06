@@ -21,8 +21,8 @@ const contactMethods = [
     icon: Mail,
     title: 'Email Us',
     description: 'For general inquiries and support',
-    value: 'support@businesspilot.ai',
-    href: 'mailto:support@businesspilot.ai',
+    value: 'harry@thebusinesspilot.com',
+    href: 'mailto:harry@thebusinesspilot.com',
   },
   {
     icon: MessageSquare,

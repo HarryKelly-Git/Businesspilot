@@ -150,8 +150,8 @@ export function PrivacyPage() {
           </p>
           <div className="flex items-center gap-2 text-primary">
             <Mail className="w-4 h-4" />
-            <a href="mailto:privacy@businesspilot.ai" className="hover:underline">
-              privacy@businesspilot.ai
+            <a href="mailto:harry@thebusinesspilot.com" className="hover:underline">
+              harry@thebusinesspilot.com
             </a>
           </div>
         </motion.div>

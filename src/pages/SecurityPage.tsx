@@ -187,11 +187,11 @@ export function SecurityPage() {
             team, and we'll respond within 24 hours.
           </p>
           <a
-            href="mailto:security@businesspilot.ai"
+            href="mailto:harry@thebusinesspilot.com"
             className="inline-flex items-center gap-2 text-primary hover:underline"
           >
             <Shield className="w-4 h-4" />
-            security@businesspilot.ai
+            harry@thebusinesspilot.com
           </a>
         </motion.div>
 
