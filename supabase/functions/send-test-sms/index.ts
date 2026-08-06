@@ -39,6 +39,8 @@ Deno.serve(async (req: Request) => {
     const result = await sendSms(toE164(phone), message);
 
     if (!result.success) {
+      // Log the provider failure so a bad test send is traceable from the logs.
+      console.error(`[test-sms] send failed (code ${result.code}): ${result.error}`);
       if (result.code === 21211) {
         return json({
           success: false,
@@ -56,7 +58,10 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, error: "Could not send SMS. Please try again shortly." });
     }
 
-    return json({ success: true, message: "Test SMS sent! Check your phone." });
+    // Log + return the TNZ MessageID so every test send is traceable straight
+    // from the function logs and matchable to the TNZ dashboard delivery report.
+    console.log(`[test-sms] sent (sid ${result.sid})`);
+    return json({ success: true, sid: result.sid, message: "Test SMS sent! Check your phone." });
   } catch (error) {
     console.error("Error sending test SMS:", error);
     return json({ success: false, error: "Failed to send SMS. Please try again later." });
