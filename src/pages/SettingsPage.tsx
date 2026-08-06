@@ -14,6 +14,7 @@ import {
   Trash2,
   AlertTriangle,
   Star,
+  Ban,
 } from 'lucide-react';
 import { Card, Button, Input, Select, Textarea, Badge, Spinner, Modal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +31,7 @@ const tabs = [
   { id: 'services', label: 'Services', icon: SettingsIcon },
   { id: 'ai', label: 'Response Settings', icon: MessageSquare },
   { id: 'reviews', label: 'Reviews', icon: Star },
+  { id: 'optouts', label: 'Unsubscribes', icon: Ban },
   { id: 'account', label: 'Account', icon: User },
   { id: 'billing', label: 'Billing', icon: CreditCard },
 ];
@@ -79,6 +81,12 @@ export function SettingsPage() {
   const [googleReviewLink, setGoogleReviewLink] = useState('');
   const [autoRequestReviews, setAutoRequestReviews] = useState(false);
   const [reviewDelayHours, setReviewDelayHours] = useState('2');
+
+  // Unsubscribe / opt-out list (NZ UEM Act compliance visibility)
+  const [suppressions, setSuppressions] = useState<
+    Array<{ id: string; phone: string; reason: string; created_at: string }>
+  >([]);
+  const [suppressionsLoading, setSuppressionsLoading] = useState(false);
 
   // Services
   const [services, setServices] = useState<string[]>([]);
@@ -134,6 +142,37 @@ export function SettingsPage() {
       }
     }
   }, [business]);
+
+  // Load the unsubscribe list lazily, only when its tab is opened.
+  useEffect(() => {
+    if (activeTab !== 'optouts' || !business?.id) return;
+    let cancelled = false;
+    (async () => {
+      setSuppressionsLoading(true);
+      const { data, error } = await supabase
+        .from('sms_suppressions')
+        .select('id, phone, reason, created_at')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false });
+      if (cancelled) return;
+      if (error) toast.error('Could not load your unsubscribe list');
+      setSuppressions(data ?? []);
+      setSuppressionsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, business?.id]);
+
+  const handleRemoveSuppression = async (id: string, phone: string) => {
+    const { error } = await supabase.from('sms_suppressions').delete().eq('id', id);
+    if (error) {
+      toast.error('Could not remove that number');
+      return;
+    }
+    setSuppressions((prev) => prev.filter((s) => s.id !== id));
+    toast.success(`${phone} can be messaged again`);
+  };
 
   const handleSaveBusiness = async () => {
     setSaving(true);
@@ -687,6 +726,58 @@ export function SettingsPage() {
                   </Button>
                 </div>
               </div>
+            </Card>
+          )}
+
+          {/* Unsubscribes (opt-out list) */}
+          {activeTab === 'optouts' && (
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-1">Unsubscribes</h2>
+              <p className="text-sm text-muted-foreground mb-6 max-w-lg">
+                Customers who reply STOP are added here automatically and are never messaged
+                again from any feature — AI replies, Ghost Lead campaigns, or review requests.
+                This is required under the NZ Unsolicited Electronic Messages Act 2007. Remove
+                someone only if they've asked to start hearing from you again.
+              </p>
+
+              {suppressionsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Spinner className="h-6 w-6" />
+                </div>
+              ) : suppressions.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-8 text-center max-w-lg">
+                  <Ban className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm font-medium">No one has opted out</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When a customer replies STOP, their number appears here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-w-lg">
+                  {suppressions.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">{s.phone}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.reason === 'stop_reply' ? 'Replied STOP' : 'Added manually'}
+                          {' · '}
+                          {new Date(s.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveSuppression(s.id, s.phone)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           )}
 

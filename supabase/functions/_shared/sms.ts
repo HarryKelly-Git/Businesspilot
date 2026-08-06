@@ -40,13 +40,21 @@ export function smsConfigured(): boolean {
 }
 
 /**
- * True when `e164` is our own inbound Twilio line. Guards against sending an
- * alert to the number customers text in on: Twilio would post it to
- * twilio-webhook, which would detect "emergency" in the alert body and loop,
- * billing a message every cycle. (Inbound is still Twilio; only outbound moved.)
+ * True when `e164` is a number the platform itself owns — our inbound Twilio
+ * line OR our Telnyx sending number. Guards against sending an alert to one of
+ * our own numbers:
+ *   - the Twilio line is where customers text IN, so an alert sent there would
+ *     be posted to twilio-webhook, re-detected as "EMERGENCY", and loop —
+ *     billing a message every cycle. This is the real loop risk, and it still
+ *     lives on Twilio even though outbound now goes via Telnyx.
+ *   - the Telnyx number is our sender; texting ourselves is nonsensical.
+ * Checking both keeps the guard meaningful now that Telnyx is the sender (it
+ * previously only knew about the Twilio number).
  */
 export function isPlatformNumber(e164: string): boolean {
-  return TWILIO_PHONE_NUMBER ? toE164(TWILIO_PHONE_NUMBER) === e164 : false;
+  return [TWILIO_PHONE_NUMBER, TELNYX_NUMBER]
+    .filter((n): n is string => Boolean(n))
+    .some((n) => toE164(n) === e164);
 }
 
 /**

@@ -1,6 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { corsHeaders, getAuthenticatedUserId, json } from "../_shared/auth.ts";
+import {
+  adminClient,
+  corsHeaders,
+  getAuthenticatedUserId,
+  getOwnedBusinessId,
+  json,
+} from "../_shared/auth.ts";
 import { sendSms, smsConfigured, toE164 } from "../_shared/sms.ts";
+import { isSuppressed } from "../_shared/suppression.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -32,11 +39,25 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const e164 = toE164(phone);
+
+    // Honour the opt-out list even on a manual test send — a number that replied
+    // STOP must not be messaged from any feature, this one included.
+    const supabase = adminClient();
+    const businessId = await getOwnedBusinessId(supabase, userId);
+    if (businessId && (await isSuppressed(supabase, businessId, e164))) {
+      return json({
+        success: false,
+        error:
+          "That number is on your unsubscribe list (they replied STOP), so we didn't send. Remove them in Settings → Unsubscribes to message them again.",
+      });
+    }
+
     const message =
       `Hi! This is BusinessPilot${businessName ? ` for ${businessName}` : ""}. ` +
       `This is how fast your customers will hear back from you, day or night. Reply STOP to opt out.`;
 
-    const result = await sendSms(toE164(phone), message);
+    const result = await sendSms(e164, message);
 
     if (!result.success) {
       // Log the provider failure so a bad test send is traceable from the logs.

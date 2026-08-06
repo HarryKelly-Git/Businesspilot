@@ -2,6 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { adminClient, corsHeaders } from "../_shared/auth.ts";
 import { generateReply } from "../_shared/ai.ts";
 import { alertOwnerOfEmergency, detectEmergency, raiseUrgency } from "../_shared/emergency.ts";
+import {
+  addSuppression,
+  detectOptOutIntent,
+  isSuppressed,
+  removeSuppression,
+} from "../_shared/suppression.ts";
 
 const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
 // Set this when the public URL Twilio posts to differs from what the edge
@@ -126,6 +132,46 @@ Deno.serve(async (req: Request) => {
 
     const businessId = business.id;
 
+    // --- NZ UEM Act 2007: opt-out / opt-in ---------------------------------
+    // Honour STOP/START before any other processing, so an opt-out is never run
+    // through the AI or used to page the owner, and gets exactly ONE reply — via
+    // TwiML, the single-reply channel, so a confirmation can't double-send.
+    const optOut = detectOptOutIntent(body);
+    if (optOut === "stop") {
+      await addSuppression(supabase, businessId, from, "stop_reply");
+      await supabase.from("incoming_messages").insert({
+        business_id: businessId,
+        phone: from,
+        message: body,
+        source: "sms",
+        processed: true,
+      });
+      console.log(`[optout] ${from} opted out of business ${businessId}`);
+      return twiml(
+        `You've been unsubscribed and won't receive any more messages from ${business.name}. Reply START to resubscribe.`
+      );
+    }
+    if (optOut === "start") {
+      await removeSuppression(supabase, businessId, from);
+      await supabase.from("incoming_messages").insert({
+        business_id: businessId,
+        phone: from,
+        message: body,
+        source: "sms",
+        processed: true,
+      });
+      console.log(`[optout] ${from} resubscribed to business ${businessId}`);
+      return twiml(
+        `You're resubscribed to ${business.name}. Reply STOP at any time to opt out.`
+      );
+    }
+
+    // Is this number on the suppression list? If so we'll still capture the lead
+    // and (for a genuine emergency) page the owner below — the opt-out only stops
+    // us MESSAGING the customer, never the owner's safety alert — but we send the
+    // customer no reply. Resolved once here; enforced at the reply step.
+    const customerSuppressed = await isSuppressed(supabase, businessId, from);
+
     // Classify urgency from the raw message (instant, no AI call). Drives the
     // stored lead.urgency and whether we page the owner.
     const emergency = detectEmergency(body, business.industry);
@@ -207,15 +253,19 @@ Deno.serve(async (req: Request) => {
     // Generate the customer reply and page the owner concurrently — the alert is
     // independent of the reply, so it must not add latency to the customer's text.
     const [aiResponse] = await Promise.all([
-      generateReply(
-        {
-          name: business.name,
-          industry: business.industry,
-          settings: business.settings as Record<string, unknown> | null,
-        },
-        body,
-        history
-      ),
+      // Don't spend an AI call generating a reply we won't send to an opted-out
+      // customer — but the owner alert alongside still runs unconditionally.
+      customerSuppressed
+        ? Promise.resolve(null)
+        : generateReply(
+            {
+              name: business.name,
+              industry: business.industry,
+              settings: business.settings as Record<string, unknown> | null,
+            },
+            body,
+            history
+          ),
       shouldAlertOwner
         ? alertOwnerOfEmergency(supabase, {
             businessId,
@@ -227,6 +277,27 @@ Deno.serve(async (req: Request) => {
           })
         : Promise.resolve(null),
     ]);
+
+    // Opted-out customer: the owner alert above already fired if warranted (it
+    // goes to the owner, never suppressed), but we send the customer nothing.
+    // Store just their inbound turn and return an empty TwiML response.
+    if (customerSuppressed) {
+      if (conversation) {
+        await supabase
+          .from("ai_conversations")
+          .update({ messages: [...history, userMessage] })
+          .eq("id", conversation.id);
+      } else {
+        await supabase.from("ai_conversations").insert({
+          business_id: businessId,
+          lead_id: leadId,
+          channel: "sms",
+          messages: [userMessage],
+        });
+      }
+      console.log(`[optout] suppressed ${from} texted in; owner alert honoured, customer not replied to`);
+      return twiml(null);
+    }
 
     // If the model is unavailable, still acknowledge so the customer isn't left
     // hanging — but don't fake a qualifying conversation.

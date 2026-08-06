@@ -14,6 +14,11 @@ import {
   detectFrustration,
   raiseUrgency,
 } from "../_shared/emergency.ts";
+import {
+  addSuppression,
+  detectOptOutIntent,
+  removeSuppression,
+} from "../_shared/suppression.ts";
 
 interface IncomingMessage {
   phone: string;
@@ -59,6 +64,27 @@ Deno.serve(async (req: Request) => {
       .select("name, industry, settings")
       .eq("id", businessId)
       .single();
+
+    // Opt-out handling, so the dashboard simulator can exercise the STOP/START
+    // flow end to end (the live path is twilio-webhook). Checked before any
+    // emergency/AI processing — an opt-out is never run through the model.
+    const optOut = detectOptOutIntent(message);
+    if (optOut === "stop") {
+      await addSuppression(supabase, businessId, phone, "stop_reply");
+      return json({
+        success: true,
+        opted_out: true,
+        message: `${phone} has been added to your unsubscribe list and won't be messaged again.`,
+      });
+    }
+    if (optOut === "start") {
+      await removeSuppression(supabase, businessId, phone);
+      return json({
+        success: true,
+        resubscribed: true,
+        message: `${phone} has been removed from your unsubscribe list.`,
+      });
+    }
 
     // Classify urgency from the raw message (instant, no AI call). Drives the
     // stored lead.urgency and whether we page the owner.
