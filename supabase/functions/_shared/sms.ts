@@ -23,8 +23,17 @@
 
 // Outbound provider: Telnyx. Secrets live at the platform level (single-tenant).
 const TELNYX_API_KEY = Deno.env.get("TELNYX_API_KEY");
-// The sending number (E.164), e.g. the US Telnyx number.
+// The sending number (E.164), e.g. the US Telnyx number. Used as `from` only
+// when no alphanumeric sender ID is configured (below).
 const TELNYX_NUMBER = Deno.env.get("TELNYX_NUMBER");
+// Alphanumeric sender ID (e.g. "BizPilot", max 11 chars). REQUIRED to deliver
+// to New Zealand: Telnyx routes NZ A2P via an alpha sender and rejects a US
+// long-code number (error 40306 "Alpha sender not configured"). When set, this
+// is used as `from` in preference to TELNYX_NUMBER — it is the sender that was
+// verified to actually deliver to a NZ mobile. Note: alpha senders are ONE-WAY
+// (recipients can't reply), which is fine for owner alerts; NZ carriers also
+// display it as a short code rather than the literal text.
+const TELNYX_SENDER_ID = Deno.env.get("TELNYX_SENDER_ID");
 // Optional: send from a messaging profile's number pool instead of / as well as
 // a fixed `from`. One of TELNYX_NUMBER or this must be set.
 const TELNYX_MESSAGING_PROFILE_ID = Deno.env.get("TELNYX_MESSAGING_PROFILE_ID");
@@ -36,7 +45,9 @@ const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
 
 /** True when the credentials needed to send (Telnyx) are present. */
 export function smsConfigured(): boolean {
-  return Boolean(TELNYX_API_KEY && (TELNYX_NUMBER || TELNYX_MESSAGING_PROFILE_ID));
+  return Boolean(
+    TELNYX_API_KEY && (TELNYX_SENDER_ID || TELNYX_NUMBER || TELNYX_MESSAGING_PROFILE_ID),
+  );
 }
 
 /**
@@ -133,10 +144,13 @@ export async function sendSms(to: string, body: string): Promise<SmsResult> {
     };
   }
 
+  // Prefer the alphanumeric sender ID (required for NZ delivery) over the raw
+  // number — this is the exact `from` that was verified to reach a NZ mobile.
+  const from = TELNYX_SENDER_ID || TELNYX_NUMBER;
   const payload: Record<string, unknown> = {
     to, // E.164
     text: body,
-    ...(TELNYX_NUMBER ? { from: TELNYX_NUMBER } : {}),
+    ...(from ? { from } : {}),
     ...(TELNYX_MESSAGING_PROFILE_ID ? { messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID } : {}),
   };
 
